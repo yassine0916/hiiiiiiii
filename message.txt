@@ -1,0 +1,1293 @@
+-- Unknow Hub - Complete GUI Script with Centered FOV Circle and Hitbox Toggle
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local GuiService = game:GetService("GuiService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Variables
+local screenGui = nil
+local mainFrame = nil
+local isUIOpen = false
+local espEnabled = false
+local aimbotEnabled = false
+local fovCircleEnabled = false
+local hitboxEnabled = true
+local hitboxSize = 8 -- Default hitbox size
+
+-- Advanced ESP Configuration
+local ESPConfig = {
+    BoxESP = true,
+    BoxColor = Color3.fromRGB(255, 255, 255),
+    TeamColor = true,
+    BoxOutline = true,
+    
+    NameESP = true,
+    DistanceESP = true,
+    HealthESP = true,
+    SkeletonESP = true,
+    
+    TeamCheck = true,
+    AllyColor = Color3.fromRGB(0, 255, 140),
+    EnemyColor = Color3.fromRGB(255, 25, 25),
+    
+    BoxTrans = 0.7,
+    TextTrans = 0.7,
+    
+    MaxDistance = 1000,
+    TextSize = 16
+}
+
+-- Aimbot Configuration
+local AimbotConfig = {
+    Enabled = false,
+    TeamCheck = true,
+    Smoothness = 0.05, -- Super fast
+    FOV = 100,
+    AutoShoot = false,
+    TargetPart = "Head",
+    VisibilityCheck = true,
+    Prediction = 0.15,
+    TriggerKey = Enum.UserInputType.MouseButton2
+}
+
+-- ESP Variables
+local ESPObjects = {}
+local ESPConnection = nil
+
+-- Aimbot Variables
+local AimbotTarget = nil
+local AimbotConnection = nil
+local Mouse = player:GetMouse()
+
+-- FOV Circle Variables
+local FOVCircle = nil
+local FOVConnection = nil
+
+-- Hitbox Variables
+local bigHitboxes = {}
+local hitboxConnection = nil
+
+-- Show notification
+local function showNotification()
+    local notifyGui = Instance.new("ScreenGui")
+    notifyGui.Name = "Notification"
+    notifyGui.Parent = playerGui
+    notifyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    local notifyFrame = Instance.new("Frame")
+    notifyFrame.Name = "NotifyFrame"
+    notifyFrame.Size = UDim2.new(0, 300, 0, 100)
+    notifyFrame.Position = UDim2.new(0.5, -150, 0.1, 0)
+    notifyFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    notifyFrame.BorderSizePixel = 0
+    notifyFrame.Parent = notifyGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = notifyFrame
+
+    local shadow = Instance.new("ImageLabel")
+    shadow.Name = "Shadow"
+    shadow.Size = UDim2.new(1, 10, 1, 10)
+    shadow.Position = UDim2.new(0, -5, 0, -5)
+    shadow.BackgroundTransparency = 1
+    shadow.Image = "rbxassetid://1316045217"
+    shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+    shadow.ImageTransparency = 0.8
+    shadow.ScaleType = Enum.ScaleType.Slice
+    shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+    shadow.Parent = notifyFrame
+    shadow.ZIndex = -1
+
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.new(1, 0, 0, 40)
+    title.BackgroundTransparency = 1
+    title.Text = "Unknow Hub"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 20
+    title.Font = Enum.Font.GothamBold
+    title.Parent = notifyFrame
+
+    local message = Instance.new("TextLabel")
+    message.Name = "Message"
+    message.Size = UDim2.new(1, 0, 0, 40)
+    message.Position = UDim2.new(0, 0, 0, 40)
+    message.BackgroundTransparency = 1
+    message.Text = "enjoy lil kid"
+    message.TextColor3 = Color3.fromRGB(200, 200, 200)
+    message.TextSize = 16
+    message.Font = Enum.Font.Gotham
+    message.Parent = notifyFrame
+
+    -- Animate in
+    notifyFrame.Position = UDim2.new(0.5, -150, -1, 0)
+    local tweenIn = TweenService:Create(notifyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -150, 0.1, 0)})
+    tweenIn:Play()
+
+    -- Animate out after 3 seconds
+    task.delay(3, function()
+        local tweenOut = TweenService:Create(notifyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -150, -1, 0)})
+        tweenOut:Play()
+        task.wait(0.5)
+        notifyGui:Destroy()
+    end)
+end
+
+-- Create rainbow floating button
+local function createRainbowButton()
+    local floatingButton = Instance.new("ScreenGui")
+    floatingButton.Name = "RainbowButton"
+    floatingButton.Parent = playerGui
+    floatingButton.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    floatingButton.ResetOnSpawn = false
+
+    local button = Instance.new("ImageButton")
+    button.Name = "RainbowOpenButton"
+    button.Size = UDim2.new(0, 60, 0, 60)
+    button.Position = UDim2.new(0, 20, 0.5, -30)
+    button.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    button.BorderSizePixel = 0
+    button.Image = "rbxassetid://3926305904"
+    button.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    button.ImageRectSize = Vector2.new(36, 36)
+    button.ImageRectOffset = Vector2.new(964, 324)
+    button.Parent = floatingButton
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = button
+
+    local shadow = Instance.new("ImageLabel")
+    shadow.Name = "Shadow"
+    shadow.Size = UDim2.new(1, 10, 1, 10)
+    shadow.Position = UDim2.new(0, -5, 0, -5)
+    shadow.BackgroundTransparency = 1
+    shadow.Image = "rbxassetid://1316045217"
+    shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+    shadow.ImageTransparency = 0.8
+    shadow.ScaleType = Enum.ScaleType.Slice
+    shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+    shadow.Parent = button
+    shadow.ZIndex = -1
+
+    -- Rainbow color animation
+    local hue = 0
+    local rainbowConnection
+    rainbowConnection = RunService.Heartbeat:Connect(function()
+        hue = (hue + 0.01) % 1
+        local color = Color3.fromHSV(hue, 1, 1)
+        button.BackgroundColor3 = color
+    end)
+
+    -- Make button draggable
+    local dragging = false
+    local dragInput
+    local dragStart
+    local startPos
+
+    local function update(input)
+        local delta = input.Position - dragStart
+        button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
+    button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = button.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    button.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
+
+    -- Click to open UI
+    button.MouseButton1Click:Connect(function()
+        if not dragging then
+            toggleUI()
+        end
+    end)
+
+    -- Hover effect
+    button.MouseEnter:Connect(function()
+        local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(button, tweenInfo, {Size = UDim2.new(0, 65, 0, 65)})
+        tween:Play()
+    end)
+
+    button.MouseLeave:Connect(function()
+        local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(button, tweenInfo, {Size = UDim2.new(0, 60, 0, 60)})
+        tween:Play()
+    end)
+
+    return floatingButton
+end
+
+-- FOV Circle Functions
+local function createFOVCircle()
+    if FOVCircle then
+        FOVCircle:Remove()
+    end
+    
+    FOVCircle = Drawing.new("Circle")
+    FOVCircle.Visible = false
+    FOVCircle.Transparency = 1
+    FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+    FOVCircle.Thickness = 2
+    FOVCircle.Filled = false
+    FOVCircle.NumSides = 100
+    
+    return FOVCircle
+end
+
+local function getScreenCenter()
+    -- Get the screen center position
+    local viewportSize = Camera.ViewportSize
+    return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+end
+
+local function updateFOVCircle()
+    if not FOVCircle then
+        FOVCircle = createFOVCircle()
+    end
+    
+    FOVCircle.Visible = fovCircleEnabled
+    FOVCircle.Radius = AimbotConfig.FOV
+    
+    -- Always position at screen center
+    local screenCenter = getScreenCenter()
+    FOVCircle.Position = screenCenter
+end
+
+local function startFOVCircle()
+    FOVConnection = RunService.RenderStepped:Connect(updateFOVCircle)
+end
+
+local function stopFOVCircle()
+    if FOVConnection then
+        FOVConnection:Disconnect()
+        FOVConnection = nil
+    end
+    if FOVCircle then
+        FOVCircle.Visible = false
+    end
+end
+
+-- Hitbox Size System
+local function createBigHitbox(enemy)
+    if not enemy or not enemy:IsA("Model") then return nil end
+    
+    local mainPart = enemy:FindFirstChild("HumanoidRootPart") or 
+                    enemy:FindFirstChild("UpperTorso") or 
+                    enemy:FindFirstChild("Torso") or 
+                    enemy:FindFirstChild("Head")
+    
+    if not mainPart then return nil end
+    
+    -- Remove existing hitbox
+    local existingHitbox = enemy:FindFirstChild("UnknowHub_BigHitbox")
+    if existingHitbox then
+        existingHitbox:Destroy()
+    end
+    
+    -- Create new hitbox with current size
+    local bigHitbox = Instance.new("Part")
+    bigHitbox.Name = "UnknowHub_BigHitbox"
+    bigHitbox.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
+    bigHitbox.CFrame = mainPart.CFrame
+    bigHitbox.Anchored = false
+    bigHitbox.CanCollide = false
+    bigHitbox.Transparency = 0.7
+    bigHitbox.Color = Color3.fromRGB(255, 50, 50)
+    bigHitbox.Material = Enum.Material.Neon
+    
+    local weld = Instance.new("Weld")
+    weld.Part0 = mainPart
+    weld.Part1 = bigHitbox
+    weld.C0 = CFrame.new()
+    weld.C1 = CFrame.new()
+    weld.Parent = bigHitbox
+    
+    bigHitbox.Parent = enemy
+    return bigHitbox
+end
+
+local function updateAllHitboxes()
+    if not hitboxEnabled then return end
+    
+    -- Clear existing hitboxes
+    for _, hitbox in pairs(bigHitboxes) do
+        if hitbox and hitbox.Parent then
+            hitbox:Destroy()
+        end
+    end
+    bigHitboxes = {}
+    
+    -- Create new hitboxes with updated size
+    for _, enemy in pairs(workspace:GetChildren()) do
+        if enemy:IsA("Model") and enemy ~= player.Character then
+            local humanoid = enemy:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                local bigHitbox = createBigHitbox(enemy)
+                if bigHitbox then
+                    table.insert(bigHitboxes, bigHitbox)
+                end
+            end
+        end
+    end
+end
+
+local function startHitboxSystem()
+    updateAllHitboxes()
+    
+    hitboxConnection = RunService.Heartbeat:Connect(function()
+        updateAllHitboxes()
+    end)
+end
+
+local function stopHitboxSystem()
+    if hitboxConnection then
+        hitboxConnection:Disconnect()
+        hitboxConnection = nil
+    end
+    
+    -- Remove all hitboxes
+    for _, hitbox in pairs(bigHitboxes) do
+        if hitbox then
+            hitbox:Destroy()
+        end
+    end
+    bigHitboxes = {}
+end
+
+local function toggleHitboxSystem()
+    if hitboxEnabled then
+        stopHitboxSystem()
+    else
+        startHitboxSystem()
+    end
+end
+
+-- Advanced ESP Functions
+local function CreateDrawing(type, props)
+    local obj = Drawing.new(type)
+    for i,v in pairs(props) do
+        obj[i] = v
+    end
+    return obj
+end
+
+local function IsAlive(plr)
+    return plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0
+end
+
+local function GetTeamColor(plr)
+    if ESPConfig.TeamColor and plr.Team and plr.Team.TeamColor then
+        return plr.Team.TeamColor.Color
+    elseif ESPConfig.TeamCheck then
+        return plr.Team == player.Team and ESPConfig.AllyColor or ESPConfig.EnemyColor
+    else
+        return ESPConfig.BoxColor
+    end
+end
+
+local function CreatePlayerESP(plr)
+    local esp = {
+        Box = CreateDrawing("Square", {
+            Thickness = 1,
+            Filled = false,
+            Transparency = ESPConfig.BoxTrans,
+            Color = ESPConfig.BoxColor,
+            Visible = false
+        }),
+        BoxOutline = CreateDrawing("Square", {
+            Thickness = 3,
+            Filled = false,
+            Transparency = ESPConfig.BoxTrans,
+            Color = Color3.fromRGB(0, 0, 0),
+            Visible = false
+        }),
+        Name = CreateDrawing("Text", {
+            Text = plr.Name,
+            Size = ESPConfig.TextSize,
+            Center = true,
+            Outline = true,
+            OutlineColor = Color3.fromRGB(0, 0, 0),
+            Color = ESPConfig.BoxColor,
+            Transparency = ESPConfig.TextTrans,
+            Visible = false
+        }),
+        Distance = CreateDrawing("Text", {
+            Size = ESPConfig.TextSize - 2,
+            Center = true,
+            Outline = true,
+            OutlineColor = Color3.fromRGB(0, 0, 0),
+            Color = Color3.fromRGB(175, 175, 175),
+            Transparency = ESPConfig.TextTrans,
+            Visible = false
+        }),
+        HealthBar = CreateDrawing("Square", {
+            Thickness = 1,
+            Filled = true,
+            Transparency = ESPConfig.BoxTrans + 0.2,
+            Color = Color3.fromRGB(0, 255, 0),
+            Visible = false
+        }),
+        HealthBarBG = CreateDrawing("Square", {
+            Thickness = 1,
+            Filled = true,
+            Transparency = ESPConfig.BoxTrans - 0.2,
+            Color = Color3.fromRGB(40, 40, 40),
+            Visible = false
+        })
+    }
+    
+    ESPObjects[plr] = esp
+    return esp
+end
+
+local function UpdateESP()
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= player then
+            local esp = ESPObjects[plr] or CreatePlayerESP(plr)
+            
+            if IsAlive(plr) and plr.Character:FindFirstChild("HumanoidRootPart") then
+                local char = plr.Character
+                local hrp = char.HumanoidRootPart
+                local hum = char:FindFirstChild("Humanoid")
+                
+                local pos, vis = Camera:WorldToViewportPoint(hrp.Position)
+                local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
+                
+                if vis and dist <= ESPConfig.MaxDistance then
+                    local teamColor = GetTeamColor(plr)
+                    
+                    -- Simple box calculation
+                    local head = char:FindFirstChild("Head")
+                    if head then
+                        local headPos = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
+                        local legPos = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+                        
+                        local boxSize = Vector2.new(math.abs(headPos.Y - legPos.Y) * 0.6, math.abs(headPos.Y - legPos.Y))
+                        local boxPos = Vector2.new(pos.X - boxSize.X / 2, pos.Y - boxSize.Y / 2)
+                        
+                        if ESPConfig.BoxESP then
+                            esp.Box.Size = boxSize
+                            esp.Box.Position = boxPos
+                            esp.Box.Color = teamColor
+                            esp.Box.Visible = true
+                            
+                            if ESPConfig.BoxOutline then
+                                esp.BoxOutline.Size = boxSize
+                                esp.BoxOutline.Position = boxPos
+                                esp.BoxOutline.Visible = true
+                            else
+                                esp.BoxOutline.Visible = false
+                            end
+                        else
+                            esp.Box.Visible = false
+                            esp.BoxOutline.Visible = false
+                        end
+                        
+                        if ESPConfig.NameESP then
+                            esp.Name.Text = plr.Name
+                            esp.Name.Position = Vector2.new(boxPos.X + boxSize.X / 2, boxPos.Y - 15)
+                            esp.Name.Color = teamColor
+                            esp.Name.Visible = true
+                        else
+                            esp.Name.Visible = false
+                        end
+                        
+                        if ESPConfig.DistanceESP then
+                            esp.Distance.Text = tostring(math.floor(dist)) .. "m"
+                            esp.Distance.Position = Vector2.new(boxPos.X + boxSize.X / 2, boxPos.Y + boxSize.Y + 3)
+                            esp.Distance.Visible = true
+                        else
+                            esp.Distance.Visible = false
+                        end
+                        
+                        if ESPConfig.HealthESP and hum then
+                            local hp = hum.Health / hum.MaxHealth
+                            local barSize = Vector2.new(3, boxSize.Y * hp)
+                            local barPos = boxPos + Vector2.new(-5, boxSize.Y * (1 - hp))
+                            
+                            esp.HealthBar.Size = barSize
+                            esp.HealthBar.Position = barPos
+                            esp.HealthBar.Color = Color3.fromRGB(255 - (255 * hp), (255 * hp), 0)
+                            esp.HealthBar.Visible = true
+                            
+                            esp.HealthBarBG.Size = Vector2.new(3, boxSize.Y)
+                            esp.HealthBarBG.Position = Vector2.new(boxPos.X - 5, boxPos.Y)
+                            esp.HealthBarBG.Visible = true
+                        else
+                            esp.HealthBar.Visible = false
+                            esp.HealthBarBG.Visible = false
+                        end
+                    end
+                else
+                    esp.Box.Visible = false
+                    esp.BoxOutline.Visible = false
+                    esp.Name.Visible = false
+                    esp.Distance.Visible = false
+                    esp.HealthBar.Visible = false
+                    esp.HealthBarBG.Visible = false
+                end
+            else
+                esp.Box.Visible = false
+                esp.BoxOutline.Visible = false
+                esp.Name.Visible = false
+                esp.Distance.Visible = false
+                esp.HealthBar.Visible = false
+                esp.HealthBarBG.Visible = false
+            end
+        end
+    end
+end
+
+local function startESP()
+    if ESPConnection then ESPConnection:Disconnect() end
+    ESPConnection = RunService.RenderStepped:Connect(UpdateESP)
+end
+
+local function stopESP()
+    if ESPConnection then
+        ESPConnection:Disconnect()
+        ESPConnection = nil
+    end
+    
+    for _, esp in pairs(ESPObjects) do
+        for _, drawing in pairs(esp) do
+            if drawing and drawing.Remove then
+                drawing:Remove()
+            end
+        end
+    end
+    ESPObjects = {}
+end
+
+-- Super Fast Aimbot Functions
+local function findBestTarget()
+    local bestTarget = nil
+    local closestDistance = AimbotConfig.FOV
+    
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= player and IsAlive(plr) and IsAlive(player) then
+            if AimbotConfig.TeamCheck and plr.Team == player.Team then
+                continue
+            end
+            
+            local char = plr.Character
+            local targetPart = char:FindFirstChild("Head") -- Always target head
+            
+            if targetPart then
+                local screenPoint = Camera:WorldToViewportPoint(targetPart.Position)
+                local screenCenter = getScreenCenter()
+                local targetPos = Vector2.new(screenPoint.X, screenPoint.Y)
+                local distance = (screenCenter - targetPos).Magnitude
+                
+                if distance < closestDistance then
+                    if AimbotConfig.VisibilityCheck then
+                        local ray = Ray.new(Camera.CFrame.Position, (targetPart.Position - Camera.CFrame.Position).Unit * 1000)
+                        local hit = workspace:FindPartOnRayWithIgnoreList(ray, {player.Character, char})
+                        if hit and hit:IsDescendantOf(char) then
+                            bestTarget = plr
+                            closestDistance = distance
+                        end
+                    else
+                        bestTarget = plr
+                        closestDistance = distance
+                    end
+                end
+            end
+        end
+    end
+    
+    return bestTarget
+end
+
+local function aimAtTarget()
+    if not AimbotTarget or not IsAlive(AimbotTarget) or not IsAlive(player) then
+        AimbotTarget = nil
+        return
+    end
+    
+    local char = AimbotTarget.Character
+    local head = char:FindFirstChild("Head")
+    
+    if head then
+        -- Super fast prediction for head
+        local velocity = head.AssemblyLinearVelocity * AimbotConfig.Prediction
+        local predictedPosition = head.Position + velocity
+        
+        local screenPoint = Camera:WorldToViewportPoint(predictedPosition)
+        local targetPosition = Vector2.new(screenPoint.X, screenPoint.Y)
+        
+        -- Get screen center for aiming
+        local screenCenter = getScreenCenter()
+        
+        -- Ultra fast aiming (minimal smoothing)
+        local delta = (targetPosition - screenCenter) * AimbotConfig.Smoothness
+        
+        -- Direct snap to head with minimal delay
+        mousemoverel(delta.X, delta.Y)
+        
+        -- Auto shoot
+        if AimbotConfig.AutoShoot then
+            mouse1click()
+        end
+    end
+end
+
+local function startAimbot()
+    AimbotConnection = RunService.Heartbeat:Connect(function()
+        if not aimbotEnabled then return end
+        
+        if UserInputService:IsMouseButtonPressed(AimbotConfig.TriggerKey) then
+            if not AimbotTarget or not IsAlive(AimbotTarget) then
+                AimbotTarget = findBestTarget()
+            end
+            
+            if AimbotTarget then
+                aimAtTarget()
+            end
+        else
+            AimbotTarget = nil
+        end
+    end)
+end
+
+local function stopAimbot()
+    if AimbotConnection then
+        AimbotConnection:Disconnect()
+        AimbotConnection = nil
+    end
+    AimbotTarget = nil
+end
+
+-- Create main UI
+local function createUI()
+    if screenGui then screenGui:Destroy() end
+
+    screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "UnknowHub"
+    screenGui.Parent = playerGui
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.Enabled = false
+
+    -- Main Frame
+    mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 400, 0, 500)
+    mainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = screenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = mainFrame
+
+    local shadow = Instance.new("ImageLabel")
+    shadow.Name = "Shadow"
+    shadow.Size = UDim2.new(1, 10, 1, 10)
+    shadow.Position = UDim2.new(0, -5, 0, -5)
+    shadow.BackgroundTransparency = 1
+    shadow.Image = "rbxassetid://1316045217"
+    shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+    shadow.ImageTransparency = 0.8
+    shadow.ScaleType = Enum.ScaleType.Slice
+    shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+    shadow.Parent = mainFrame
+    shadow.ZIndex = -1
+
+    -- Header
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 50)
+    header.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    header.BorderSizePixel = 0
+    header.Parent = mainFrame
+
+    local headerCorner = Instance.new("UICorner")
+    headerCorner.CornerRadius = UDim.new(0, 12)
+    headerCorner.Parent = header
+
+    -- Title
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.new(1, -50, 1, 0)
+    title.Position = UDim2.new(0, 15, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "Unknow Hub"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 22
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Font = Enum.Font.GothamBold
+    title.Parent = header
+
+    -- Close Button
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Size = UDim2.new(0, 30, 0, 30)
+    closeButton.Position = UDim2.new(1, -35, 0.5, -15)
+    closeButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+    closeButton.BorderSizePixel = 0
+    closeButton.Text = "X"
+    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeButton.TextSize = 14
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.Parent = header
+
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 15)
+    closeCorner.Parent = closeButton
+
+    -- ESP Toggle
+    local espToggle = Instance.new("TextButton")
+    espToggle.Name = "ESPToggle"
+    espToggle.Size = UDim2.new(0.8, 0, 0, 40)
+    espToggle.Position = UDim2.new(0.1, 0, 0.12, 0)
+    espToggle.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    espToggle.BorderSizePixel = 0
+    espToggle.Text = "ESP: OFF"
+    espToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    espToggle.TextSize = 16
+    espToggle.Font = Enum.Font.Gotham
+    espToggle.Parent = mainFrame
+
+    local espCorner = Instance.new("UICorner")
+    espCorner.CornerRadius = UDim.new(0, 8)
+    espCorner.Parent = espToggle
+
+    -- Aimbot Toggle
+    local aimbotToggle = Instance.new("TextButton")
+    aimbotToggle.Name = "AimbotToggle"
+    aimbotToggle.Size = UDim2.new(0.8, 0, 0, 40)
+    aimbotToggle.Position = UDim2.new(0.1, 0, 0.22, 0)
+    aimbotToggle.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    aimbotToggle.BorderSizePixel = 0
+    aimbotToggle.Text = "Aimbot: OFF"
+    aimbotToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    aimbotToggle.TextSize = 16
+    aimbotToggle.Font = Enum.Font.Gotham
+    aimbotToggle.Parent = mainFrame
+
+    local aimbotCorner = Instance.new("UICorner")
+    aimbotCorner.CornerRadius = UDim.new(0, 8)
+    aimbotCorner.Parent = aimbotToggle
+
+    -- FOV Circle Toggle
+    local fovToggle = Instance.new("TextButton")
+    fovToggle.Name = "FOVToggle"
+    fovToggle.Size = UDim2.new(0.8, 0, 0, 40)
+    fovToggle.Position = UDim2.new(0.1, 0, 0.32, 0)
+    fovToggle.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    fovToggle.BorderSizePixel = 0
+    fovToggle.Text = "FOV Circle: OFF"
+    fovToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fovToggle.TextSize = 16
+    fovToggle.Font = Enum.Font.Gotham
+    fovToggle.Parent = mainFrame
+
+    local fovCorner = Instance.new("UICorner")
+    fovCorner.CornerRadius = UDim.new(0, 8)
+    fovCorner.Parent = fovToggle
+
+    -- Hitbox Toggle
+    local hitboxToggle = Instance.new("TextButton")
+    hitboxToggle.Name = "HitboxToggle"
+    hitboxToggle.Size = UDim2.new(0.8, 0, 0, 40)
+    hitboxToggle.Position = UDim2.new(0.1, 0, 0.42, 0)
+    hitboxToggle.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+    hitboxToggle.BorderSizePixel = 0
+    hitboxToggle.Text = "Hitbox: ON"
+    hitboxToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    hitboxToggle.TextSize = 16
+    hitboxToggle.Font = Enum.Font.Gotham
+    hitboxToggle.Parent = mainFrame
+
+    local hitboxToggleCorner = Instance.new("UICorner")
+    hitboxToggleCorner.CornerRadius = UDim.new(0, 8)
+    hitboxToggleCorner.Parent = hitboxToggle
+
+    -- FOV Size Slider
+    local fovFrame = Instance.new("Frame")
+    fovFrame.Name = "FOVFrame"
+    fovFrame.Size = UDim2.new(0.8, 0, 0, 80)
+    fovFrame.Position = UDim2.new(0.1, 0, 0.52, 0)
+    fovFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    fovFrame.BorderSizePixel = 0
+    fovFrame.Parent = mainFrame
+
+    local fovFrameCorner = Instance.new("UICorner")
+    fovFrameCorner.CornerRadius = UDim.new(0, 8)
+    fovFrameCorner.Parent = fovFrame
+
+    local fovLabel = Instance.new("TextLabel")
+    fovLabel.Name = "FOVLabel"
+    fovLabel.Size = UDim2.new(1, 0, 0, 25)
+    fovLabel.Position = UDim2.new(0, 0, 0, 5)
+    fovLabel.BackgroundTransparency = 1
+    fovLabel.Text = "FOV Size: " .. AimbotConfig.FOV
+    fovLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fovLabel.TextSize = 16
+    fovLabel.Font = Enum.Font.Gotham
+    fovLabel.Parent = fovFrame
+
+    local fovSliderFrame = Instance.new("Frame")
+    fovSliderFrame.Name = "FOVSliderFrame"
+    fovSliderFrame.Size = UDim2.new(0.9, 0, 0, 20)
+    fovSliderFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
+    fovSliderFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    fovSliderFrame.BorderSizePixel = 0
+    fovSliderFrame.Parent = fovFrame
+
+    local fovSliderCorner = Instance.new("UICorner")
+    fovSliderCorner.CornerRadius = UDim.new(0, 10)
+    fovSliderCorner.Parent = fovSliderFrame
+
+    local fovSliderFill = Instance.new("Frame")
+    fovSliderFill.Name = "FOVSliderFill"
+    fovSliderFill.Size = UDim2.new((AimbotConfig.FOV - 10) / 190, 0, 1, 0) -- 10 to 200 range
+    fovSliderFill.Position = UDim2.new(0, 0, 0, 0)
+    fovSliderFill.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    fovSliderFill.BorderSizePixel = 0
+    fovSliderFill.Parent = fovSliderFrame
+
+    local fovFillCorner = Instance.new("UICorner")
+    fovFillCorner.CornerRadius = UDim.new(0, 10)
+    fovFillCorner.Parent = fovSliderFill
+
+    local fovSliderButton = Instance.new("TextButton")
+    fovSliderButton.Name = "FOVSliderButton"
+    fovSliderButton.Size = UDim2.new(1, 0, 1, 0)
+    fovSliderButton.Position = UDim2.new(0, 0, 0, 0)
+    fovSliderButton.BackgroundTransparency = 1
+    fovSliderButton.Text = ""
+    fovSliderButton.Parent = fovSliderFrame
+
+    -- FOV Size Buttons
+    local fovSmallerButton = Instance.new("TextButton")
+    fovSmallerButton.Name = "FOVSmallerButton"
+    fovSmallerButton.Size = UDim2.new(0.2, 0, 0, 25)
+    fovSmallerButton.Position = UDim2.new(0.05, 0, 0.75, 0)
+    fovSmallerButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    fovSmallerButton.BorderSizePixel = 0
+    fovSmallerButton.Text = "-"
+    fovSmallerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fovSmallerButton.TextSize = 16
+    fovSmallerButton.Font = Enum.Font.GothamBold
+    fovSmallerButton.Parent = fovFrame
+
+    local fovBiggerButton = Instance.new("TextButton")
+    fovBiggerButton.Name = "FOVBiggerButton"
+    fovBiggerButton.Size = UDim2.new(0.2, 0, 0, 25)
+    fovBiggerButton.Position = UDim2.new(0.75, 0, 0.75, 0)
+    fovBiggerButton.BackgroundColor3 = Color3.fromRGB(60, 200, 60)
+    fovBiggerButton.BorderSizePixel = 0
+    fovBiggerButton.Text = "+"
+    fovBiggerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fovBiggerButton.TextSize = 16
+    fovBiggerButton.Font = Enum.Font.GothamBold
+    fovBiggerButton.Parent = fovFrame
+
+    local fovButtonCorner = Instance.new("UICorner")
+    fovButtonCorner.CornerRadius = UDim.new(0, 6)
+    fovButtonCorner.Parent = fovSmallerButton
+    fovButtonCorner:Clone().Parent = fovBiggerButton
+
+    -- Hitbox Size Slider
+    local hitboxFrame = Instance.new("Frame")
+    hitboxFrame.Name = "HitboxFrame"
+    hitboxFrame.Size = UDim2.new(0.8, 0, 0, 80)
+    hitboxFrame.Position = UDim2.new(0.1, 0, 0.72, 0)
+    hitboxFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    hitboxFrame.BorderSizePixel = 0
+    hitboxFrame.Parent = mainFrame
+
+    local hitboxCorner = Instance.new("UICorner")
+    hitboxCorner.CornerRadius = UDim.new(0, 8)
+    hitboxCorner.Parent = hitboxFrame
+
+    local hitboxLabel = Instance.new("TextLabel")
+    hitboxLabel.Name = "HitboxLabel"
+    hitboxLabel.Size = UDim2.new(1, 0, 0, 25)
+    hitboxLabel.Position = UDim2.new(0, 0, 0, 5)
+    hitboxLabel.BackgroundTransparency = 1
+    hitboxLabel.Text = "Hitbox Size: " .. hitboxSize
+    hitboxLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    hitboxLabel.TextSize = 16
+    hitboxLabel.Font = Enum.Font.Gotham
+    hitboxLabel.Parent = hitboxFrame
+
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Name = "SliderFrame"
+    sliderFrame.Size = UDim2.new(0.9, 0, 0, 20)
+    sliderFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
+    sliderFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    sliderFrame.BorderSizePixel = 0
+    sliderFrame.Parent = hitboxFrame
+
+    local sliderCorner = Instance.new("UICorner")
+    sliderCorner.CornerRadius = UDim.new(0, 10)
+    sliderCorner.Parent = sliderFrame
+
+    local sliderFill = Instance.new("Frame")
+    sliderFill.Name = "SliderFill"
+    sliderFill.Size = UDim2.new((hitboxSize - 2) / 18, 0, 1, 0) -- 2 to 20 range
+    sliderFill.Position = UDim2.new(0, 0, 0, 0)
+    sliderFill.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+    sliderFill.BorderSizePixel = 0
+    sliderFill.Parent = sliderFrame
+
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 10)
+    fillCorner.Parent = sliderFill
+
+    local sliderButton = Instance.new("TextButton")
+    sliderButton.Name = "SliderButton"
+    sliderButton.Size = UDim2.new(1, 0, 1, 0)
+    sliderButton.Position = UDim2.new(0, 0, 0, 0)
+    sliderButton.BackgroundTransparency = 1
+    sliderButton.Text = ""
+    sliderButton.Parent = sliderFrame
+
+    -- Size Buttons
+    local smallerButton = Instance.new("TextButton")
+    smallerButton.Name = "SmallerButton"
+    smallerButton.Size = UDim2.new(0.2, 0, 0, 25)
+    smallerButton.Position = UDim2.new(0.05, 0, 0.75, 0)
+    smallerButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    smallerButton.BorderSizePixel = 0
+    smallerButton.Text = "-"
+    smallerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    smallerButton.TextSize = 16
+    smallerButton.Font = Enum.Font.GothamBold
+    smallerButton.Parent = hitboxFrame
+
+    local biggerButton = Instance.new("TextButton")
+    biggerButton.Name = "BiggerButton"
+    biggerButton.Size = UDim2.new(0.2, 0, 0, 25)
+    biggerButton.Position = UDim2.new(0.75, 0, 0.75, 0)
+    biggerButton.BackgroundColor3 = Color3.fromRGB(60, 200, 60)
+    biggerButton.BorderSizePixel = 0
+    biggerButton.Text = "+"
+    biggerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    biggerButton.TextSize = 16
+    biggerButton.Font = Enum.Font.GothamBold
+    biggerButton.Parent = hitboxFrame
+
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 6)
+    buttonCorner.Parent = smallerButton
+    buttonCorner:Clone().Parent = biggerButton
+
+    -- Discord Button
+    local discordButton = Instance.new("TextButton")
+    discordButton.Name = "DiscordButton"
+    discordButton.Size = UDim2.new(0.8, 0, 0, 40)
+    discordButton.Position = UDim2.new(0.1, 0, 0.92, 0)
+    discordButton.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+    discordButton.BorderSizePixel = 0
+    discordButton.Text = "Discord Server"
+    discordButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    discordButton.TextSize = 16
+    discordButton.Font = Enum.Font.Gotham
+    discordButton.Parent = mainFrame
+
+    local discordCorner = Instance.new("UICorner")
+    discordCorner.CornerRadius = UDim.new(0, 8)
+    discordCorner.Parent = discordButton
+
+    -- Drag functionality
+    local dragging = false
+    local dragInput
+    local dragStart
+    local startPos
+
+    local function update(input)
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
+    header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = mainFrame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    header.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
+
+    -- Toggle functionality
+    espToggle.MouseButton1Click:Connect(function()
+        espEnabled = not espEnabled
+        
+        if espEnabled then
+            espToggle.Text = "ESP: ON"
+            espToggle.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+            startESP()
+        else
+            espToggle.Text = "ESP: OFF"
+            espToggle.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+            stopESP()
+        end
+    end)
+
+    aimbotToggle.MouseButton1Click:Connect(function()
+        aimbotEnabled = not aimbotEnabled
+        
+        if aimbotEnabled then
+            aimbotToggle.Text = "Aimbot: ON"
+            aimbotToggle.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+            startAimbot()
+        else
+            aimbotToggle.Text = "Aimbot: OFF"
+            aimbotToggle.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+            stopAimbot()
+        end
+    end)
+
+    fovToggle.MouseButton1Click:Connect(function()
+        fovCircleEnabled = not fovCircleEnabled
+        
+        if fovCircleEnabled then
+            fovToggle.Text = "FOV Circle: ON"
+            fovToggle.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+            startFOVCircle()
+        else
+            fovToggle.Text = "FOV Circle: OFF"
+            fovToggle.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+            stopFOVCircle()
+        end
+    end)
+
+    hitboxToggle.MouseButton1Click:Connect(function()
+        hitboxEnabled = not hitboxEnabled
+        
+        if hitboxEnabled then
+            hitboxToggle.Text = "Hitbox: ON"
+            hitboxToggle.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+            startHitboxSystem()
+        else
+            hitboxToggle.Text = "Hitbox: OFF"
+            hitboxToggle.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+            stopHitboxSystem()
+        end
+    end)
+
+    -- FOV Size functionality
+    local function updateFOVSize(newFOV)
+        AimbotConfig.FOV = math.clamp(newFOV, 10, 200)
+        fovLabel.Text = "FOV Size: " .. AimbotConfig.FOV
+        fovSliderFill.Size = UDim2.new((AimbotConfig.FOV - 10) / 190, 0, 1, 0)
+        if FOVCircle then
+            FOVCircle.Radius = AimbotConfig.FOV
+        end
+    end
+
+    fovSmallerButton.MouseButton1Click:Connect(function()
+        updateFOVSize(AimbotConfig.FOV - 10)
+    end)
+
+    fovBiggerButton.MouseButton1Click:Connect(function()
+        updateFOVSize(AimbotConfig.FOV + 10)
+    end)
+
+    -- FOV Slider drag functionality
+    local fovSliderDragging = false
+    fovSliderButton.MouseButton1Down:Connect(function()
+        fovSliderDragging = true
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            fovSliderDragging = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if fovSliderDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mousePos = UserInputService:GetMouseLocation()
+            local sliderAbsolutePos = fovSliderFrame.AbsolutePosition
+            local sliderAbsoluteSize = fovSliderFrame.AbsoluteSize
+            
+            local relativeX = (mousePos.X - sliderAbsolutePos.X) / sliderAbsoluteSize.X
+            relativeX = math.clamp(relativeX, 0, 1)
+            
+            local newFOV = math.floor(10 + (relativeX * 190)) -- 10 to 200 range
+            updateFOVSize(newFOV)
+        end
+    end)
+
+    -- Hitbox Size Slider functionality
+    local function updateHitboxSize(newSize)
+        hitboxSize = math.clamp(newSize, 2, 20)
+        hitboxLabel.Text = "Hitbox Size: " .. hitboxSize
+        sliderFill.Size = UDim2.new((hitboxSize - 2) / 18, 0, 1, 0)
+        updateAllHitboxes()
+    end
+
+    smallerButton.MouseButton1Click:Connect(function()
+        updateHitboxSize(hitboxSize - 1)
+    end)
+
+    biggerButton.MouseButton1Click:Connect(function()
+        updateHitboxSize(hitboxSize + 1)
+    end)
+
+    -- Slider drag functionality
+    local sliderDragging = false
+    sliderButton.MouseButton1Down:Connect(function()
+        sliderDragging = true
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            sliderDragging = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if sliderDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mousePos = UserInputService:GetMouseLocation()
+            local sliderAbsolutePos = sliderFrame.AbsolutePosition
+            local sliderAbsoluteSize = sliderFrame.AbsoluteSize
+            
+            local relativeX = (mousePos.X - sliderAbsolutePos.X) / sliderAbsoluteSize.X
+            relativeX = math.clamp(relativeX, 0, 1)
+            
+            local newSize = math.floor(2 + (relativeX * 18)) -- 2 to 20 range
+            updateHitboxSize(newSize)
+        end
+    end)
+
+    -- Discord button functionality
+    discordButton.MouseButton1Click:Connect(function()
+        local discordInvite = "https://discord.gg/unknowhub"
+        
+        if setclipboard then
+            setclipboard(discordInvite)
+            local originalText = discordButton.Text
+            discordButton.Text = "Copied!"
+            task.wait(2)
+            discordButton.Text = originalText
+        else
+            discordButton.Text = discordInvite
+            task.wait(3)
+            discordButton.Text = "Discord Server"
+        end
+    end)
+
+    -- Close button functionality
+    closeButton.MouseButton1Click:Connect(function()
+        toggleUI()
+    end)
+
+    -- Button hover effects
+    local function createHoverEffect(button)
+        button.MouseEnter:Connect(function()
+            local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            local tween = TweenService:Create(button, tweenInfo, {BackgroundTransparency = 0.2})
+            tween:Play()
+        end)
+        
+        button.MouseLeave:Connect(function()
+            local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            local tween = TweenService:Create(button, tweenInfo, {BackgroundTransparency = 0})
+            tween:Play()
+        end)
+    end
+
+    createHoverEffect(espToggle)
+    createHoverEffect(aimbotToggle)
+    createHoverEffect(fovToggle)
+    createHoverEffect(hitboxToggle)
+    createHoverEffect(discordButton)
+    createHoverEffect(closeButton)
+    createHoverEffect(smallerButton)
+    createHoverEffect(biggerButton)
+    createHoverEffect(fovSmallerButton)
+    createHoverEffect(fovBiggerButton)
+end
+
+-- UI toggle function
+function toggleUI()
+    isUIOpen = not isUIOpen
+    
+    if isUIOpen then
+        if not screenGui then
+            createUI()
+        end
+        screenGui.Enabled = true
+        
+        -- Animate in
+        mainFrame.Position = UDim2.new(0.5, -200, -1, -250)
+        local tweenIn = TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -200, 0.5, -250)})
+        tweenIn:Play()
+    else
+        if screenGui then
+            -- Animate out
+            local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+            local tween = TweenService:Create(mainFrame, tweenInfo, {Position = UDim2.new(0.5, -200, -1, -250)})
+            tween:Play()
+            
+            task.wait(0.3)
+            screenGui.Enabled = false
+        end
+    end
+end
+
+-- Auto-start hitbox system (enabled by default)
+startHitboxSystem()
+
+-- Initialize
+showNotification()
+createRainbowButton()
+
+print("Unknow Hub loaded successfully!")
+print("Features: Advanced ESP, Super Fast Aimbot, Centered FOV Circle, Hitbox Toggle")
+print("FOV Circle: Always centered on screen")
+print("Hitbox System: Enabled by default (can toggle off)")
+print("Aimbot: Ultra fast head tracking from screen center")
+print("Controls: Hold Right Mouse Button for Aimbot")
+print("Click the rainbow button to open the UI")
