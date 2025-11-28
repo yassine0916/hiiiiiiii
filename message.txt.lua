@@ -1290,4 +1290,5 @@ print("FOV Circle: Always centered on screen")
 print("Hitbox System: Enabled by default (can toggle off)")
 print("Aimbot: Ultra fast head tracking from screen center")
 print("Controls: Hold Right Mouse Button for Aimbot")
+
 print("Click the rainbow button to open the UI")
