@@ -1,4 +1,4 @@
--- Complete Aimbot & ESP System for Phone with Hidden FOV Circle
+-- Complete Aimbot & ESP System for Phone with Fixed FOV Circle
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -44,22 +44,31 @@ local targetLock = false
 -- UI Toggles
 local AimbotEnabled = true
 local ESPEnabled = true
-local FOVCircleVisible = false  -- Changed to false (invisible by default)
-local UIVisible = true
+local FOVCircleVisible = false
+local UIVisible = false  -- Start with UI closed
 
 -- ESP Objects
 local ESPObjects = {}
 
--- Create FOV Circle (invisible by default)
+-- Create FOV Circle Function (FIXED)
 local function createFOVCircle()
-    local circle = Drawing.new("Circle")
-    circle.Visible = false  -- Set to invisible
-    circle.Radius = FOV_RADIUS
-    circle.Thickness = 3
-    circle.Color = Color3.fromRGB(255, 0, 0)
-    circle.Filled = false
-    circle.Transparency = 0.6
-    return circle
+    local success, circle = pcall(function()
+        local drawing = Drawing.new("Circle")
+        drawing.Visible = false
+        drawing.Radius = FOV_RADIUS
+        drawing.Thickness = 3
+        drawing.Color = Color3.fromRGB(255, 0, 0)
+        drawing.Filled = false
+        drawing.Transparency = 0.6
+        return drawing
+    end)
+    
+    if success and circle then
+        return circle
+    else
+        warn("Failed to create FOV circle")
+        return nil
+    end
 end
 
 -- Initialize FOV Circle
@@ -362,14 +371,19 @@ local function UpdateESP()
     end
 end
 
--- MAIN LOOP
-RunService.RenderStepped:Connect(function(deltaTime)
-    -- Update FOV Circle (always update position but control visibility)
+-- FIXED FOV CIRCLE UPDATE FUNCTION
+local function updateFOVCircle()
+    if not fovCircle then 
+        fovCircle = createFOVCircle()
+        if not fovCircle then return end
+    end
+    
     if Camera then
         local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
         fovCircle.Position = screenCenter
+        fovCircle.Radius = FOV_RADIUS
         
-        -- Rainbow color effect (only if visible)
+        -- Rainbow color effect
         if FOVCircleVisible then
             local rainbowTime = tick() * RAINBOW_SPEED
             local r = math.sin(rainbowTime) * 0.5 + 0.5
@@ -381,6 +395,12 @@ RunService.RenderStepped:Connect(function(deltaTime)
             fovCircle.Visible = false
         end
     end
+end
+
+-- MAIN LOOP
+RunService.RenderStepped:Connect(function(deltaTime)
+    -- Update FOV Circle (FIXED)
+    updateFOVCircle()
     
     -- Aimbot System
     if AimbotEnabled then
@@ -410,13 +430,14 @@ ScreenGui.Name = "AimbotTesting"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Main Container
+-- Main Container (starts hidden)
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 220, 0, 280)
 MainFrame.Position = UDim2.new(0, 10, 0.5, -140)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MainFrame.BackgroundTransparency = 0.2
 MainFrame.BorderSizePixel = 0
+MainFrame.Visible = false  -- Start hidden
 MainFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
@@ -492,8 +513,8 @@ FOVToggle.Size = UDim2.new(1, 0, 0, 40)
 FOVToggle.Position = UDim2.new(0, 0, 0, 100)
 FOVToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
 FOVToggle.BorderSizePixel = 0
-FOVToggle.Text = "Show FOV Circle: OFF"  -- Changed to OFF since it's invisible by default
-FOVToggle.TextColor3 = Color3.fromRGB(255, 50, 50)  -- Red color for OFF
+FOVToggle.Text = "Show FOV Circle: OFF"
+FOVToggle.TextColor3 = Color3.fromRGB(255, 50, 50)
 FOVToggle.Font = Enum.Font.SourceSansSemibold
 FOVToggle.TextSize = 16
 FOVToggle.Parent = TogglesContainer
@@ -556,20 +577,28 @@ CloseButton.TextSize = 18
 CloseButton.Parent = MainFrame
 ToggleCorner:Clone().Parent = CloseButton
 
--- Circle Open Button (when UI is closed)
-local OpenButton = Instance.new("TextButton")
-OpenButton.Size = UDim2.new(0, 60, 0, 60)
-OpenButton.Position = UDim2.new(0, 10, 0.5, -30)
-OpenButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-OpenButton.BorderSizePixel = 0
-OpenButton.Text = "☰"
-OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenButton.Font = Enum.Font.SourceSansBold
-OpenButton.TextSize = 24
-OpenButton.Visible = false
-OpenButton.Parent = ScreenGui
-ToggleCorner:Clone().Parent = OpenButton
-UIStroke:Clone().Parent = OpenButton
+-- Open/Close Button (ALWAYS VISIBLE ON SCREEN)
+local OpenCloseButton = Instance.new("TextButton")
+OpenCloseButton.Size = UDim2.new(0, 60, 0, 60)
+OpenCloseButton.Position = UDim2.new(0, 20, 0, 20)  -- Top left corner
+OpenCloseButton.BackgroundColor3 = Color3.fromRGB(40, 120, 200)
+OpenCloseButton.BorderSizePixel = 0
+OpenCloseButton.Text = "☰"
+OpenCloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenCloseButton.Font = Enum.Font.SourceSansBold
+OpenCloseButton.TextSize = 24
+OpenCloseButton.Visible = true  -- ALWAYS VISIBLE
+OpenCloseButton.ZIndex = 10
+OpenCloseButton.Parent = ScreenGui
+
+local OpenCloseCorner = Instance.new("UICorner")
+OpenCloseCorner.CornerRadius = UDim.new(1, 0)  -- Perfect circle
+OpenCloseCorner.Parent = OpenCloseButton
+
+local OpenCloseStroke = Instance.new("UIStroke")
+OpenCloseStroke.Color = Color3.fromRGB(255, 255, 255)
+OpenCloseStroke.Thickness = 2
+OpenCloseStroke.Parent = OpenCloseButton
 
 -- Toggle Functions
 AimbotToggle.MouseButton1Click:Connect(function()
@@ -599,13 +628,11 @@ FOVToggle.MouseButton1Click:Connect(function()
     FOVCircleVisible = not FOVCircleVisible
     FOVToggle.Text = "Show FOV Circle: " .. (FOVCircleVisible and "ON" or "OFF")
     FOVToggle.TextColor3 = FOVCircleVisible and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
-    fovCircle.Visible = FOVCircleVisible
 end)
 
 -- FOV Slider Function
 local function updateFOVSize(value)
     FOV_RADIUS = math.floor(value)
-    fovCircle.Radius = FOV_RADIUS
     FOVSliderLabel.Text = "FOV Size: " .. FOV_RADIUS
     FOVSliderFill.Size = UDim2.new((FOV_RADIUS - 20) / (150 - 20), 0, 1, 0)
     FOVSliderButton.Position = UDim2.new((FOV_RADIUS - 20) / (150 - 20), -10, 0, 0)
@@ -638,23 +665,26 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Touch support for slider
-if UserInputService.TouchEnabled then
-    FOVSliderButton.TouchLongPress:Connect(function()
-        draggingFOV = true
-    end)
-end
+-- Open/Close Button Function (FIXED)
+OpenCloseButton.MouseButton1Click:Connect(function()
+    UIVisible = not UIVisible
+    MainFrame.Visible = UIVisible
+    
+    -- Change button appearance when UI is open
+    if UIVisible then
+        OpenCloseButton.Text = "✕"
+        OpenCloseButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+    else
+        OpenCloseButton.Text = "☰"
+        OpenCloseButton.BackgroundColor3 = Color3.fromRGB(40, 120, 200)
+    end
+end)
 
 CloseButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
-    OpenButton.Visible = true
     UIVisible = false
-end)
-
-OpenButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = true
-    OpenButton.Visible = false
-    UIVisible = true
+    OpenCloseButton.Text = "☰"
+    OpenCloseButton.BackgroundColor3 = Color3.fromRGB(40, 120, 200)
 end)
 
 -- Make UI draggable
@@ -716,14 +746,14 @@ print("=====================================")
 print("Features:")
 print("- 🔥 Instant Head-Lock Aimbot")
 print("- 🎯 ESP with Box, Name, Distance, Health")
-print("- 🌈 Rainbow FOV Circle (Hidden by default)")
+print("- 🌈 Rainbow FOV Circle (Toggle to show)")
 print("- 📱 Phone-Friendly UI")
 print("- 💀 Works when dead/respawning")
 print("")
 print("UI Controls:")
+print("- Click the BLUE CIRCLE button to open/close UI")
 print("- Toggle Aimbot: ON/OFF")
 print("- Toggle ESP: ON/OFF") 
 print("- Toggle FOV Circle: Show/Hide")
 print("- FOV Size Slider: 20-150")
 print("- Drag to move UI")
-print("- Close/Open with buttons")
