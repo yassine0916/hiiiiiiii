@@ -23,7 +23,9 @@ local ArabicText = {
     Green = "أخضر",
     Blue = "أزرق",
     Yellow = "أصفر",
-    Purple = "بنفسجي"
+    Purple = "بنفسجي",
+    White = "أبيض",
+    Orange = "برتقالي"
 }
 
 -- المتغيرات
@@ -56,8 +58,8 @@ ToggleButton.Parent = ScreenGui
 -- النافذة الرئيسية
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 300, 0, 400)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+MainFrame.Size = UDim2.new(0, 320, 0, 450)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -225)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = false
@@ -122,7 +124,7 @@ ESPTitle.Parent = ESPFrame
 
 local ESPToggle = Instance.new("TextButton")
 ESPToggle.Name = "ESPToggle"
-ESPToggle.Size = UDim2.new(0, 80, 0, 30)
+ESPToggle.Size = UDim2.new(0, 120, 0, 30)
 ESPToggle.Position = UDim2.new(0, 10, 0, 40)
 ESPToggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
 ESPToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -134,8 +136,8 @@ ESPToggle.Parent = ESPFrame
 
 local ESPColorButton = Instance.new("TextButton")
 ESPColorButton.Name = "ESPColorButton"
-ESPColorButton.Size = UDim2.new(0, 80, 0, 30)
-ESPColorButton.Position = UDim2.new(0, 100, 0, 40)
+ESPColorButton.Size = UDim2.new(0, 120, 0, 30)
+ESPColorButton.Position = UDim2.new(0, 140, 0, 40)
 ESPColorButton.BackgroundColor3 = ESPColor
 ESPColorButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ESPColorButton.Text = ArabicText.Color
@@ -147,7 +149,7 @@ ESPColorButton.Parent = ESPFrame
 -- قسم Hitbox
 local HitboxFrame = Instance.new("Frame")
 HitboxFrame.Name = "HitboxFrame"
-HitboxFrame.Size = UDim2.new(1, 0, 0, 150)
+HitboxFrame.Size = UDim2.new(1, 0, 0, 200)
 HitboxFrame.Position = UDim2.new(0, 0, 0, 110)
 HitboxFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 HitboxFrame.BorderSizePixel = 0
@@ -167,7 +169,7 @@ HitboxTitle.Parent = HitboxFrame
 
 local HitboxToggle = Instance.new("TextButton")
 HitboxToggle.Name = "HitboxToggle"
-HitboxToggle.Size = UDim2.new(0, 80, 0, 30)
+HitboxToggle.Size = UDim2.new(0, 120, 0, 30)
 HitboxToggle.Position = UDim2.new(0, 10, 0, 40)
 HitboxToggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
 HitboxToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -180,31 +182,48 @@ HitboxToggle.Parent = HitboxFrame
 -- أزرار تغيير ألوان Hitbox
 local ColorButtonsFrame = Instance.new("Frame")
 ColorButtonsFrame.Name = "ColorButtonsFrame"
-ColorButtonsFrame.Size = UDim2.new(1, -20, 0, 60)
+ColorButtonsFrame.Size = UDim2.new(1, -20, 0, 100)
 ColorButtonsFrame.Position = UDim2.new(0, 10, 0, 80)
 ColorButtonsFrame.BackgroundTransparency = 1
 ColorButtonsFrame.Parent = HitboxFrame
 
+-- الألوان مع الزر الأزرق المضمن
 local colors = {
     {Name = ArabicText.Red, Color = Color3.fromRGB(255, 0, 0)},
     {Name = ArabicText.Green, Color = Color3.fromRGB(0, 255, 0)},
-    {Name = ArabicText.Blue, Color = Color3.fromRGB(0, 0, 255)},
+    {Name = ArabicText.Blue, Color = Color3.fromRGB(0, 100, 255)}, -- أزرق واضح
     {Name = ArabicText.Yellow, Color = Color3.fromRGB(255, 255, 0)},
-    {Name = ArabicText.Purple, Color = Color3.fromRGB(255, 0, 255)}
+    {Name = ArabicText.Purple, Color = Color3.fromRGB(180, 0, 180)},
+    {Name = ArabicText.White, Color = Color3.fromRGB(255, 255, 255)},
+    {Name = ArabicText.Orange, Color = Color3.fromRGB(255, 165, 0)}
 }
 
+-- إنشاء أزرار الألوان في صفين
 for i, colorInfo in ipairs(colors) do
     local ColorButton = Instance.new("TextButton")
     ColorButton.Name = colorInfo.Name
     ColorButton.Size = UDim2.new(0.45, 0, 0, 25)
-    ColorButton.Position = UDim2.new((i-1)%2 * 0.5, 5, math.floor((i-1)/2) * 0.5, 5)
+    
+    -- تحديد الموضع (صفين)
+    local column = (i-1) % 3  -- 3 أعمدة
+    local row = math.floor((i-1) / 3)
+    
+    ColorButton.Position = UDim2.new(column * 0.33, 5, row * 0.5, 5)
     ColorButton.BackgroundColor3 = colorInfo.Color
-    ColorButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ColorButton.TextColor3 = Color3.fromRGB(0, 0, 0)
     ColorButton.Text = colorInfo.Name
-    ColorButton.Font = Enum.Font.Gotham
+    ColorButton.Font = Enum.Font.GothamBold
     ColorButton.TextSize = 12
-    ColorButton.BorderSizePixel = 0
+    ColorButton.BorderSizePixel = 1
+    ColorButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
     ColorButton.Parent = ColorButtonsFrame
+    
+    -- لجعل النص مرئي على الألوان الفاتحة
+    if colorInfo.Name == ArabicText.White or colorInfo.Name == ArabicText.Yellow then
+        ColorButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+    else
+        ColorButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    end
 end
 
 -- إضافة الصورة (يمكنك استبدال الرابط بصورة الخاصة بك)
@@ -213,7 +232,8 @@ Logo.Name = "Logo"
 Logo.Size = UDim2.new(0, 60, 0, 60)
 Logo.Position = UDim2.new(0.8, 0, 0, -70)
 Logo.BackgroundTransparency = 1
-Logo.Image = "rbxassetid://1234567890" -- ضع رابط الصورة هنا
+Logo.Image = "nil" -- ضع رابط الصورة هنا
+Logo.Visible = false -- مؤقتاً غير مرئي حتى تضيف صورتك
 Logo.Parent = MainFrame
 
 -- وضع الواجهة على الشاشة
@@ -225,8 +245,9 @@ local function ToggleGUI()
 end
 
 local function UpdateESP()
+    -- تنظيف ESP القديم
     for _, esp in pairs(ESPInstances) do
-        if esp then
+        if esp and esp.Parent then
             esp:Remove()
         end
     end
@@ -237,7 +258,6 @@ local function UpdateESP()
     for _, otherPlayer in pairs(Players:GetPlayers()) do
         if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local character = otherPlayer.Character
-            local humanoidRootPart = character.HumanoidRootPart
             
             -- Highlight ESP
             local highlight = Instance.new("Highlight")
@@ -245,41 +265,50 @@ local function UpdateESP()
             highlight.Adornee = character
             highlight.FillColor = ESPColor
             highlight.OutlineColor = ESPColor
-            highlight.FillTransparency = 0.3
+            highlight.FillTransparency = 0.5
             highlight.OutlineTransparency = 0
+            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
             highlight.Parent = character
             
             -- Track Line
-            local beam = Instance.new("Beam")
-            beam.Name = "MZTrackLine"
-            beam.Color = ColorSequence.new(ESPColor)
-            beam.Width0 = 0.2
-            beam.Width1 = 0.2
-            
-            local attachment0 = Instance.new("Attachment")
-            attachment0.Name = "MZAttachment0"
-            attachment0.Parent = humanoidRootPart
-            
-            local attachment1 = Instance.new("Attachment")
-            attachment1.Name = "MZAttachment1"
-            attachment1.Parent = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            
-            beam.Attachment0 = attachment0
-            beam.Attachment1 = attachment1
-            beam.Parent = workspace
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local beam = Instance.new("Beam")
+                beam.Name = "MZTrackLine"
+                beam.Color = ColorSequence.new(ESPColor)
+                beam.Width0 = 0.1
+                beam.Width1 = 0.1
+                beam.Brightness = 2
+                
+                local attachment0 = Instance.new("Attachment")
+                attachment0.Name = "MZAttachment0"
+                attachment0.Parent = otherPlayer.Character.HumanoidRootPart
+                
+                local attachment1 = Instance.new("Attachment")
+                attachment1.Name = "MZAttachment1"
+                attachment1.Parent = player.Character.HumanoidRootPart
+                
+                beam.Attachment0 = attachment0
+                beam.Attachment1 = attachment1
+                beam.Parent = workspace
+                
+                table.insert(ESPInstances, beam)
+                table.insert(ESPInstances, attachment0)
+                table.insert(ESPInstances, attachment1)
+            end
             
             table.insert(ESPInstances, highlight)
-            table.insert(ESPInstances, beam)
-            table.insert(ESPInstances, attachment0)
-            table.insert(ESPInstances, attachment1)
         end
     end
 end
 
 local function UpdateHitbox()
-    for _, hitbox in pairs(HitboxInstances) do
-        if hitbox then
-            hitbox:Remove()
+    -- تنظيف الهيت بوكس القديم أولاً
+    for _, hitboxData in pairs(HitboxInstances) do
+        if hitboxData.Part and hitboxData.Part.Parent then
+            hitboxData.Part.Size = hitboxData.OriginalSize
+            hitboxData.Part.Transparency = hitboxData.OriginalTransparency
+            hitboxData.Part.BrickColor = hitboxData.OriginalColor
+            hitboxData.Part.Material = hitboxData.OriginalMaterial
         end
     end
     HitboxInstances = {}
@@ -289,27 +318,28 @@ local function UpdateHitbox()
     for _, otherPlayer in pairs(Players:GetPlayers()) do
         if otherPlayer ~= player and otherPlayer.Character then
             local character = otherPlayer.Character
-            local humanoid = character:FindFirstChildOfClass("Humanoid")
             
-            if humanoid then
-                -- توسيع الهيت بوكس
-                for _, part in pairs(character:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        part.Size = part.Size * 2
-                        part.Transparency = 0.5
-                        part.BrickColor = BrickColor.new(HitboxColor)
-                        
-                        local originalSize = part.Size
-                        local originalTransparency = part.Transparency
-                        local originalColor = part.BrickColor
-                        
-                        table.insert(HitboxInstances, {
-                            Part = part,
-                            OriginalSize = originalSize,
-                            OriginalTransparency = originalTransparency,
-                            OriginalColor = originalColor
-                        })
-                    end
+            -- توسيع الهيت بوكس
+            for _, part in pairs(character:GetChildren()) do
+                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                    local originalSize = part.Size
+                    local originalTransparency = part.Transparency
+                    local originalColor = part.BrickColor
+                    local originalMaterial = part.Material
+                    
+                    -- توسيع الحجم
+                    part.Size = part.Size * 1.5
+                    part.Transparency = 0.3
+                    part.BrickColor = BrickColor.new(HitboxColor)
+                    part.Material = Enum.Material.Neon
+                    
+                    table.insert(HitboxInstances, {
+                        Part = part,
+                        OriginalSize = originalSize,
+                        OriginalTransparency = originalTransparency,
+                        OriginalColor = originalColor,
+                        OriginalMaterial = originalMaterial
+                    })
                 end
             end
         end
@@ -322,6 +352,7 @@ local function ResetHitbox()
             hitboxData.Part.Size = hitboxData.OriginalSize
             hitboxData.Part.Transparency = hitboxData.OriginalTransparency
             hitboxData.Part.BrickColor = hitboxData.OriginalColor
+            hitboxData.Part.Material = hitboxData.OriginalMaterial
         end
     end
     HitboxInstances = {}
@@ -354,7 +385,17 @@ ESPColorButton.MouseButton1Click:Connect(function()
     local nextIndex = (currentIndex % #colors) + 1
     ESPColor = colors[nextIndex].Color
     ESPColorButton.BackgroundColor3 = ESPColor
-    UpdateESP()
+    
+    -- تغيير لون النص حسب الخلفية
+    if colors[nextIndex].Name == ArabicText.White or colors[nextIndex].Name == ArabicText.Yellow then
+        ESPColorButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+    else
+        ESPColorButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    end
+    
+    if ESPEnabled then
+        UpdateESP()
+    end
 end)
 
 HitboxToggle.MouseButton1Click:Connect(function()
@@ -370,7 +411,8 @@ HitboxToggle.MouseButton1Click:Connect(function()
     end
 end)
 
-for _, colorInfo in ipairs(colors) do
+-- أحداث أزرار الألوان
+for i, colorInfo in ipairs(colors) do
     local button = ColorButtonsFrame:FindFirstChild(colorInfo.Name)
     if button then
         button.MouseButton1Click:Connect(function()
@@ -389,14 +431,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- إعادة التعيين عند الموت
-player.CharacterAdded:Connect(function(character)
-    character:WaitForChild("Humanoid").Died:Connect(function()
-        -- الاستمرار في العمل حتى بعد الموت
-        wait(1)
-    end)
-end)
-
 -- جعل الواجهة مناسبة للهاتف
 local function SetupMobileControls()
     local touchStartPos
@@ -406,30 +440,24 @@ local function SetupMobileControls()
         if input.UserInputType == Enum.UserInputType.Touch then
             touchStartPos = input.Position
             frameStartPos = MainFrame.Position
+            MainFrame.Draggable = true
         end
     end)
     
-    MainFrame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch and touchStartPos then
-            local delta = input.Position - touchStartPos
-            MainFrame.Position = UDim2.new(
-                frameStartPos.X.Scale,
-                frameStartPos.X.Offset + delta.X,
-                frameStartPos.Y.Scale,
-                frameStartPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-    
-    MainFrame.InputEnded:Connect(function(input)
+    ToggleButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch then
-            touchStartPos = nil
-            frameStartPos = nil
+            ToggleGUI()
         end
     end)
 end
 
 SetupMobileControls()
 
+-- التأكد من أن السكريبت يستمر بعد الموت
+player.CharacterAdded:Connect(function(character)
+    -- لا نقوم بأي شيء، ليستمر السكريبت في العمل
+end)
+
 print("MZ Hub loaded successfully! - By Unknown Boi")
 print("تم تحميل MZ Hub بنجاح! - صنع بواسطة Unknown Boi")
+print("الألوان المتاحة: أحمر، أخضر، أزرق، أصفر، بنفسجي، أبيض، برتقالي")
