@@ -79,92 +79,6 @@ local UIVisible = false
 local ESPObjects = {}
 
 -- =============================================
--- LANGUAGE SELECTION UI
--- =============================================
-local function createLanguageSelection()
-    local LangGui = Instance.new("ScreenGui")
-    LangGui.Name = "LanguageSelection"
-    LangGui.Parent = CoreGui
-    LangGui.ResetOnSpawn = false
-
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Size = UDim2.new(0, 300, 0, 200)
-    MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Parent = LangGui
-
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 12)
-    UICorner.Parent = MainFrame
-
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, 0, 0, 40)
-    Title.Position = UDim2.new(0, 0, 0, 0)
-    Title.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-    Title.BackgroundTransparency = 0.1
-    Title.Text = "Select Language / اختر اللغة"
-    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Title.Font = Enum.Font.SourceSansBold
-    Title.TextSize = 18
-    Title.Parent = MainFrame
-
-    -- English Button
-    local EnglishBtn = Instance.new("TextButton")
-    EnglishBtn.Size = UDim2.new(0.8, 0, 0, 40)
-    EnglishBtn.Position = UDim2.new(0.1, 0, 0.3, 0)
-    EnglishBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-    EnglishBtn.BorderSizePixel = 0
-    EnglishBtn.Text = "English"
-    EnglishBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    EnglishBtn.Font = Enum.Font.SourceSansSemibold
-    EnglishBtn.TextSize = 16
-    EnglishBtn.Parent = MainFrame
-
-    local BtnCorner = Instance.new("UICorner")
-    BtnCorner.CornerRadius = UDim.new(0, 8)
-    BtnCorner.Parent = EnglishBtn
-
-    -- Arabic Button
-    local ArabicBtn = Instance.new("TextButton")
-    ArabicBtn.Size = UDim2.new(0.8, 0, 0, 40)
-    ArabicBtn.Position = UDim2.new(0.1, 0, 0.6, 0)
-    ArabicBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-    ArabicBtn.BorderSizePixel = 0
-    ArabicBtn.Text = "العربية"
-    ArabicBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ArabicBtn.Font = Enum.Font.SourceSansSemibold
-    ArabicBtn.TextSize = 16
-    ArabicBtn.Parent = MainFrame
-    BtnCorner:Clone().Parent = ArabicBtn
-
-    -- Copyright Label
-    local CopyrightLabel = Instance.new("TextLabel")
-    CopyrightLabel.Size = UDim2.new(1, 0, 0, 20)
-    CopyrightLabel.Position = UDim2.new(0, 0, 0.9, 0)
-    CopyrightLabel.BackgroundTransparency = 1
-    CopyrightLabel.Text = "Copyright ©️ 'MZ server' made by 'unknown boi'"
-    CopyrightLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-    CopyrightLabel.Font = Enum.Font.SourceSans
-    CopyrightLabel.TextSize = 12
-    CopyrightLabel.Parent = MainFrame
-
-    EnglishBtn.MouseButton1Click:Connect(function()
-        chosenLanguage = Languages.English
-        LangGui:Destroy()
-        initializeSystem()
-    end)
-
-    ArabicBtn.MouseButton1Click:Connect(function()
-        chosenLanguage = Languages.Arabic
-        LangGui:Destroy()
-        initializeSystem()
-    end)
-
-    return LangGui
-end
-
--- =============================================
 -- WORKING FOV CIRCLE
 -- =============================================
 local ScreenGui, Frame
@@ -452,6 +366,92 @@ local function UpdateESP()
             end)
         end
     end
+end
+
+-- =============================================
+-- LANGUAGE SELECTION UI
+-- =============================================
+local function createLanguageSelection()
+    local LangGui = Instance.new("ScreenGui")
+    LangGui.Name = "LanguageSelection"
+    LangGui.Parent = CoreGui
+    LangGui.ResetOnSpawn = false
+
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 300, 0, 200)
+    MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Parent = LangGui
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 12)
+    UICorner.Parent = MainFrame
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 0, 40)
+    Title.Position = UDim2.new(0, 0, 0, 0)
+    Title.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    Title.BackgroundTransparency = 0.1
+    Title.Text = "Select Language / اختر اللغة"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.Font = Enum.Font.SourceSansBold
+    Title.TextSize = 18
+    Title.Parent = MainFrame
+
+    -- English Button
+    local EnglishBtn = Instance.new("TextButton")
+    EnglishBtn.Size = UDim2.new(0.8, 0, 0, 40)
+    EnglishBtn.Position = UDim2.new(0.1, 0, 0.3, 0)
+    EnglishBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+    EnglishBtn.BorderSizePixel = 0
+    EnglishBtn.Text = "English"
+    EnglishBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    EnglishBtn.Font = Enum.Font.SourceSansSemibold
+    EnglishBtn.TextSize = 16
+    EnglishBtn.Parent = MainFrame
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 8)
+    BtnCorner.Parent = EnglishBtn
+
+    -- Arabic Button
+    local ArabicBtn = Instance.new("TextButton")
+    ArabicBtn.Size = UDim2.new(0.8, 0, 0, 40)
+    ArabicBtn.Position = UDim2.new(0.1, 0, 0.6, 0)
+    ArabicBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+    ArabicBtn.BorderSizePixel = 0
+    ArabicBtn.Text = "العربية"
+    ArabicBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ArabicBtn.Font = Enum.Font.SourceSansSemibold
+    ArabicBtn.TextSize = 16
+    ArabicBtn.Parent = MainFrame
+    BtnCorner:Clone().Parent = ArabicBtn
+
+    -- Copyright Label
+    local CopyrightLabel = Instance.new("TextLabel")
+    CopyrightLabel.Size = UDim2.new(1, 0, 0, 20)
+    CopyrightLabel.Position = UDim2.new(0, 0, 0.9, 0)
+    CopyrightLabel.BackgroundTransparency = 1
+    CopyrightLabel.Text = "Copyright ©️ 'MZ server' made by 'unknown boi'"
+    CopyrightLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    CopyrightLabel.Font = Enum.Font.SourceSans
+    CopyrightLabel.TextSize = 12
+    CopyrightLabel.Parent = MainFrame
+
+    EnglishBtn.MouseButton1Click:Connect(function()
+        chosenLanguage = Languages.English
+        LangGui:Destroy()
+        initializeSystem()
+    end)
+
+    ArabicBtn.MouseButton1Click:Connect(function()
+        chosenLanguage = Languages.Arabic
+        LangGui:Destroy()
+        initializeSystem()
+    end)
+
+    return LangGui
 end
 
 -- =============================================
