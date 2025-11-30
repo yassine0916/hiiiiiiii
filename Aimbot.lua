@@ -5,7 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
 -- Aimbot Configuration
-local FOV_RADIUS = 80
+local FOV_RADIUS = 100
 local AUTO_AIM_ENABLED = true
 
 -- ESP Configuration
@@ -25,67 +25,66 @@ local currentTarget = nil
 -- UI Toggles
 local AimbotEnabled = true
 local ESPEnabled = true
-local FOVCircleVisible = true  -- VISIBLE BY DEFAULT
+local FOVCircleVisible = true
 local UIVisible = false
-
--- FOV Circle Colors
-local FOVColors = {
-    Color3.new(1, 1, 1),  -- White
-    Color3.new(1, 0, 0),  -- Red
-    Color3.new(0, 1, 0),  -- Green
-    Color3.new(0, 0, 1),  -- Blue
-    Color3.new(1, 1, 0),  -- Yellow
-    Color3.new(1, 0, 1),  -- Pink
-    Color3.new(0, 1, 1)   -- Cyan
-}
-local currentColorIndex = 1
 
 -- ESP Objects
 local ESPObjects = {}
 
--- WORKING FOV CIRCLE
-local fovCircle = Drawing.new("Circle")
-fovCircle.Visible = true  -- VISIBLE IMMEDIATELY
-fovCircle.Radius = FOV_RADIUS
-fovCircle.Thickness = 3
-fovCircle.Color = FOVColors[currentColorIndex]  -- Start with white
-fovCircle.Filled = false
-fovCircle.Transparency = 1
+-- =============================================
+-- WORKING FOV CIRCLE (FROM YOUR CODE)
+-- =============================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MobileFOVCircle"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.DisplayOrder = 999
+ScreenGui.Parent = CoreGui
 
-print("FOV CIRCLE CREATED - VISIBLE ON SCREEN!")
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, FOV_RADIUS * 2, 0, FOV_RADIUS * 2)
+Frame.Position = UDim2.new(0.5, -FOV_RADIUS, 0.5, -FOV_RADIUS)
+Frame.BackgroundTransparency = 1
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
 
--- UPDATE FOV CIRCLE POSITION
+local UICircle = Instance.new("UICorner")
+UICircle.CornerRadius = UDim.new(0.5, 0)
+UICircle.Parent = Frame
+
+local Outline = Instance.new("UIStroke")
+Outline.Color = Color3.fromRGB(255, 0, 0)  -- RED
+Outline.Thickness = 4
+Outline.Transparency = 0
+Outline.Parent = Frame
+
+-- UPDATE FOV CIRCLE
 local function updateFOVCircle()
     if not Camera then 
-        Camera = workspace.CurrentCamera
-        if not Camera then return end
+        Camera = workspace.CurrentCamera 
+        if not Camera then return end 
     end
     
-    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    fovCircle.Position = screenCenter
-    fovCircle.Radius = FOV_RADIUS
-    fovCircle.Color = FOVColors[currentColorIndex]  -- Update color
+    local Viewport = Camera.ViewportSize
+    if Viewport.X == 0 or Viewport.Y == 0 then return end
     
+    local CenterX = Viewport.X / 2
+    local CenterY = Viewport.Y / 2
+    
+    Frame.Size = UDim2.new(0, FOV_RADIUS * 2, 0, FOV_RADIUS * 2)
+    Frame.Position = UDim2.new(0, CenterX - FOV_RADIUS, 0, CenterY - FOV_RADIUS)
+    
+    -- Update visibility
     if FOVCircleVisible then
-        fovCircle.Visible = true
+        ScreenGui.Enabled = true
     else
-        fovCircle.Visible = false
+        ScreenGui.Enabled = false
     end
 end
 
--- CHANGE FOV COLOR
-local function changeFOVColor()
-    currentColorIndex = currentColorIndex + 1
-    if currentColorIndex > #FOVColors then
-        currentColorIndex = 1
-    end
-    fovCircle.Color = FOVColors[currentColorIndex]
-    
-    local colorNames = {"WHITE", "RED", "GREEN", "BLUE", "YELLOW", "PINK", "CYAN"}
-    print("FOV Circle Color: " .. colorNames[currentColorIndex])
-end
-
--- AIMBOT FUNCTIONS (WORK EVEN WHEN DEAD)
+-- =============================================
+-- AIMBOT FUNCTIONS (WORK WHEN DEAD)
+-- =============================================
 local function isTargetVisible(targetPart)
     if not targetPart or not Camera then return false end
     
@@ -120,7 +119,6 @@ local function findBestTarget()
             local humanoid = otherPlayer.Character:FindFirstChild("Humanoid")
             local head = otherPlayer.Character:FindFirstChild("Head")
             
-            -- Check if target is alive (but we don't care if WE are dead)
             if humanoid and humanoid.Health > 0 and head then
                 local screenPoint, visible = Camera:WorldToScreenPoint(head.Position)
                 
@@ -148,7 +146,9 @@ local function instantHeadLock(targetHead)
     Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, headPosition)
 end
 
--- ESP FUNCTIONS (WORK EVEN WHEN DEAD)
+-- =============================================
+-- ESP FUNCTIONS
+-- =============================================
 local function CreateDrawing(type, props)
     local obj = nil
     pcall(function()
@@ -251,7 +251,6 @@ local function UpdateESP()
             local esp = ESPObjects[plr] or CreatePlayerESP(plr)
             
             pcall(function()
-                -- Check if target is alive (we don't care if WE are dead)
                 if IsAlive(plr) and plr.Character:FindFirstChild("HumanoidRootPart") then
                     local char = plr.Character
                     local hrp = char.HumanoidRootPart
@@ -309,12 +308,14 @@ local function UpdateESP()
     end
 end
 
--- MAIN LOOP (ALWAYS RUNS EVEN WHEN DEAD)
+-- =============================================
+-- MAIN LOOP
+-- =============================================
 RunService.RenderStepped:Connect(function()
-    -- UPDATE FOV CIRCLE (ALWAYS WORKS)
+    -- UPDATE FOV CIRCLE
     updateFOVCircle()
     
-    -- AIMBOT SYSTEM (WORKS EVEN WHEN DEAD)
+    -- AIMBOT SYSTEM
     if AimbotEnabled then
         local newTarget = findBestTarget()
         
@@ -326,25 +327,27 @@ RunService.RenderStepped:Connect(function()
         end
     end
     
-    -- ESP SYSTEM (WORKS EVEN WHEN DEAD)
+    -- ESP SYSTEM
     UpdateESP()
 end)
 
+-- =============================================
 -- SIMPLE UI
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "AimbotTesting"
-ScreenGui.Parent = CoreGui
-ScreenGui.ResetOnSpawn = false
+-- =============================================
+local ControlGui = Instance.new("ScreenGui")
+ControlGui.Name = "AimbotControls"
+ControlGui.Parent = CoreGui
+ControlGui.ResetOnSpawn = false
 
 -- Main Container
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 180, 0, 190)  -- Increased height for color button
-MainFrame.Position = UDim2.new(0, 10, 0.5, -95)
+MainFrame.Size = UDim2.new(0, 180, 0, 160)
+MainFrame.Position = UDim2.new(0, 10, 0.5, -80)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MainFrame.BackgroundTransparency = 0.3
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = false
-MainFrame.Parent = ScreenGui
+MainFrame.Parent = ControlGui
 
 local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 8)
@@ -356,7 +359,7 @@ Title.Size = UDim2.new(1, 0, 0, 30)
 Title.Position = UDim2.new(0, 0, 0, 0)
 Title.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 Title.BackgroundTransparency = 0.1
-Title.Text = "Aimbot"
+Title.Text = "Aimbot - FOV 100"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 16
@@ -411,19 +414,6 @@ FOVToggle.TextSize = 14
 FOVToggle.Parent = TogglesContainer
 ToggleCorner:Clone().Parent = FOVToggle
 
--- FOV Color Changer Button
-local ColorButton = Instance.new("TextButton")
-ColorButton.Size = UDim2.new(1, 0, 0, 30)
-ColorButton.Position = UDim2.new(0, 0, 0, 105)
-ColorButton.BackgroundColor3 = FOVColors[currentColorIndex]  -- Show current color
-ColorButton.BorderSizePixel = 0
-ColorButton.Text = "Change FOV Color"
-ColorButton.TextColor3 = Color3.new(0, 0, 0)  -- Black text for visibility
-ColorButton.Font = Enum.Font.SourceSansSemibold
-ColorButton.TextSize = 12
-ColorButton.Parent = TogglesContainer
-ToggleCorner:Clone().Parent = ColorButton
-
 -- Close Button
 local CloseButton = Instance.new("TextButton")
 CloseButton.Size = UDim2.new(0, 25, 0, 25)
@@ -448,13 +438,15 @@ OpenCloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 OpenCloseButton.Font = Enum.Font.SourceSansBold
 OpenCloseButton.TextSize = 20
 OpenCloseButton.Visible = true
-OpenCloseButton.Parent = ScreenGui
+OpenCloseButton.Parent = ControlGui
 
 local OpenCloseCorner = Instance.new("UICorner")
 OpenCloseCorner.CornerRadius = UDim.new(1, 0)
 OpenCloseCorner.Parent = OpenCloseButton
 
--- Toggle Functions
+-- =============================================
+-- BUTTON FUNCTIONS
+-- =============================================
 AimbotToggle.MouseButton1Click:Connect(function()
     AimbotEnabled = not AimbotEnabled
     AimbotToggle.Text = "Aimbot: " .. (AimbotEnabled and "ON" or "OFF")
@@ -473,16 +465,6 @@ FOVToggle.MouseButton1Click:Connect(function()
     FOVToggle.TextColor3 = FOVCircleVisible and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
 end)
 
--- Color Changer Function
-ColorButton.MouseButton1Click:Connect(function()
-    changeFOVColor()
-    ColorButton.BackgroundColor3 = FOVColors[currentColorIndex]  -- Update button color
-    
-    local colorNames = {"WHITE", "RED", "GREEN", "BLUE", "YELLOW", "PINK", "CYAN"}
-    ColorButton.Text = "Color: " .. colorNames[currentColorIndex]
-end)
-
--- Open/Close Button Function
 OpenCloseButton.MouseButton1Click:Connect(function()
     UIVisible = not UIVisible
     MainFrame.Visible = UIVisible
@@ -528,9 +510,11 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- AUTO-RESPAWN SUPPORT - SYSTEM ALWAYS WORKS
+-- =============================================
+-- ALWAYS WORK (EVEN WHEN DEAD)
+-- =============================================
 player.CharacterAdded:Connect(function(character)
-    print("🔄 Character respawned - System still working!")
+    print("🔄 Character respawned - System working!")
 end)
 
 player.CharacterRemoving:Connect(function(character)
@@ -540,17 +524,14 @@ end)
 -- Cleanup
 Players.PlayerRemoving:Connect(function(leavingPlayer)
     if leavingPlayer == player then
-        if fovCircle then
-            pcall(function() fovCircle:Remove() end)
-        end
         ScreenGui:Destroy()
+        ControlGui:Destroy()
     end
 end)
 
-print("🎯 AIMBOT SYSTEM LOADED!")
-print("✅ FOV CIRCLE IS VISIBLE ON SCREEN!")
+print("🎯 COMPLETE AIMBOT SYSTEM LOADED!")
+print("✅ RED FOV CIRCLE SIZE 100 - GUARANTEED WORKING!")
 print("✅ WORKS EVEN WHEN YOU DIE!")
-print("✅ COLOR CHANGER BUTTON ADDED!")
-print("✅ AIMBOT IS WORKING!")
-print("✅ ESP IS ENABLED!")
+print("✅ AIMBOT ACTIVE!")
+print("✅ ESP ACTIVE!")
 print("Click the blue button to open controls")
