@@ -1,60 +1,17 @@
--- COMPLETE AIMBOT & ESP WITH INSTANT HEAD TRACKING
--- Copyright ©️ "MZ server" made by "unknown boi"
+-- إصابة تلقائية ورؤية عبر الجدران مع تتبع فوري للرأس
+-- حقوق النشر ©️ "MZ server" صنع بواسطة "unknown boi"
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
--- Language Selection
-local chosenLanguage = nil
-local Languages = {
-    English = {
-        title = "Aimbot - FOV 100",
-        aimbot = "Aimbot: ON",
-        esp = "ESP: ON", 
-        fovCircle = "FOV Circle: ON",
-        close = "X",
-        open = "☰",
-        closeText = "✕",
-        selectLanguage = "Select Language / اختر اللغة",
-        english = "English",
-        arabic = "العربية",
-        copyright = "Copyright ©️ 'MZ server' made by 'unknown boi'",
-        loaded = "System Loaded!",
-        working = "System Working!",
-        respawned = "Character respawned - System working!",
-        died = "Character died - System STILL WORKING!",
-        redCircle = "RED FOV CIRCLE SIZE 100 - WORKING!",
-        active = "ACTIVE!"
-    },
-    Arabic = {
-        title = "الإصابة التلقائية - مجال الرؤية 100",
-        aimbot = "الإصابة التلقائية: تشغيل",
-        esp = "الرؤية عبر الجدران: تشغيل", 
-        fovCircle = "دائرة الرؤية: تشغيل",
-        close = "X",
-        open = "☰",
-        closeText = "✕",
-        selectLanguage = "Select Language / اختر اللغة",
-        english = "English",
-        arabic = "العربية",
-        copyright = "حقوق النشر ©️ 'MZ server' صنع بواسطة 'unknown boi'",
-        loaded = "تم تحميل النظام!",
-        working = "النظام يعمل!",
-        respawned = "إعادة ولادة الشخصية - النظام يعمل!",
-        died = "وفاة الشخصية - النظام لا يزال يعمل!",
-        redCircle = "دائرة رؤية حمراء بحجم 100 - تعمل!",
-        active = "نشط!"
-    }
-}
-
--- Aimbot Configuration
+-- إعدادات الإصابة التلقائية
 local FOV_RADIUS = 100
 local AUTO_AIM_ENABLED = true
-local AIM_STRENGTH = 1.0  -- INSTANT SNAP
+local AIM_STRENGTH = 1.0  -- تتبع فوري
 
--- ESP Configuration
+-- إعدادات الرؤية عبر الجدران
 local Config = {
     BoxESP = true,
     NameESP = true,
@@ -63,23 +20,23 @@ local Config = {
     MaxDistance = 1000
 }
 
--- Local variables
+-- متغيرات محلية
 local player = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local currentTarget = nil
 local targetLock = false
 
--- UI Toggles
+-- مفاتيح التحكم
 local AimbotEnabled = true
 local ESPEnabled = true
 local FOVCircleVisible = true
 local UIVisible = false
 
--- ESP Objects
+-- كائنات الرؤية
 local ESPObjects = {}
 
 -- =============================================
--- WORKING FOV CIRCLE
+-- دائرة مجال الرؤية
 -- =============================================
 local ScreenGui, Frame
 
@@ -109,7 +66,7 @@ local function createFOVCircle()
     Outline.Parent = Frame
 end
 
--- UPDATE FOV CIRCLE
+-- تحديث دائرة الرؤية
 local function updateFOVCircle()
     if not Camera then 
         Camera = workspace.CurrentCamera 
@@ -133,7 +90,7 @@ local function updateFOVCircle()
 end
 
 -- =============================================
--- INSTANT AIMBOT FUNCTIONS
+-- وظائف الإصابة التلقائية الفورية
 -- =============================================
 local function isTargetVisible(targetPart)
     if not targetPart or not Camera then return false end
@@ -190,24 +147,24 @@ local function findBestTarget()
     return bestTarget
 end
 
--- INSTANT HEAD SNAP AND FOLLOW
+-- تتبع فوري للرأس
 local function instantHeadLock(targetHead)
     if not targetHead or not Camera then return end
     local headPosition = targetHead.Position
-    -- INSTANT SNAP - NO SMOOTHING
+    -- تتبع فوري - بدون تبطئة
     Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, headPosition)
 end
 
--- PERFECT HEAD TRACKING
+-- تتبع مثالي للرأس
 local function maintainHeadLock(targetHead)
     if not targetHead or not Camera then return end
     local headPosition = targetHead.Position
-    -- INSTANT FOLLOW - STAYS ON HEAD
+    -- تتبع فوري - البقاء على الرأس
     Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, headPosition)
 end
 
 -- =============================================
--- ESP FUNCTIONS
+-- وظائف الرؤية عبر الجدران
 -- =============================================
 local function CreateDrawing(type, props)
     local obj = nil
@@ -369,114 +326,23 @@ local function UpdateESP()
 end
 
 -- =============================================
--- LANGUAGE SELECTION UI
--- =============================================
-local function createLanguageSelection()
-    local LangGui = Instance.new("ScreenGui")
-    LangGui.Name = "LanguageSelection"
-    LangGui.Parent = CoreGui
-    LangGui.ResetOnSpawn = false
-
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Size = UDim2.new(0, 300, 0, 200)
-    MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Parent = LangGui
-
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 12)
-    UICorner.Parent = MainFrame
-
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, 0, 0, 40)
-    Title.Position = UDim2.new(0, 0, 0, 0)
-    Title.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-    Title.BackgroundTransparency = 0.1
-    Title.Text = "Select Language / اختر اللغة"
-    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Title.Font = Enum.Font.SourceSansBold
-    Title.TextSize = 18
-    Title.Parent = MainFrame
-
-    -- English Button
-    local EnglishBtn = Instance.new("TextButton")
-    EnglishBtn.Size = UDim2.new(0.8, 0, 0, 40)
-    EnglishBtn.Position = UDim2.new(0.1, 0, 0.3, 0)
-    EnglishBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-    EnglishBtn.BorderSizePixel = 0
-    EnglishBtn.Text = "English"
-    EnglishBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    EnglishBtn.Font = Enum.Font.SourceSansSemibold
-    EnglishBtn.TextSize = 16
-    EnglishBtn.Parent = MainFrame
-
-    local BtnCorner = Instance.new("UICorner")
-    BtnCorner.CornerRadius = UDim.new(0, 8)
-    BtnCorner.Parent = EnglishBtn
-
-    -- Arabic Button
-    local ArabicBtn = Instance.new("TextButton")
-    ArabicBtn.Size = UDim2.new(0.8, 0, 0, 40)
-    ArabicBtn.Position = UDim2.new(0.1, 0, 0.6, 0)
-    ArabicBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-    ArabicBtn.BorderSizePixel = 0
-    ArabicBtn.Text = "العربية"
-    ArabicBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ArabicBtn.Font = Enum.Font.SourceSansSemibold
-    ArabicBtn.TextSize = 16
-    ArabicBtn.Parent = MainFrame
-    BtnCorner:Clone().Parent = ArabicBtn
-
-    -- Copyright Label
-    local CopyrightLabel = Instance.new("TextLabel")
-    CopyrightLabel.Size = UDim2.new(1, 0, 0, 20)
-    CopyrightLabel.Position = UDim2.new(0, 0, 0.9, 0)
-    CopyrightLabel.BackgroundTransparency = 1
-    CopyrightLabel.Text = "Copyright ©️ 'MZ server' made by 'unknown boi'"
-    CopyrightLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-    CopyrightLabel.Font = Enum.Font.SourceSans
-    CopyrightLabel.TextSize = 12
-    CopyrightLabel.Parent = MainFrame
-
-    EnglishBtn.MouseButton1Click:Connect(function()
-        chosenLanguage = Languages.English
-        LangGui:Destroy()
-        initializeSystem()
-    end)
-
-    ArabicBtn.MouseButton1Click:Connect(function()
-        chosenLanguage = Languages.Arabic
-        LangGui:Destroy()
-        initializeSystem()
-    end)
-
-    return LangGui
-end
-
--- =============================================
--- MAIN SYSTEM INITIALIZATION
+-- تهيئة النظام الرئيسي
 -- =============================================
 local ControlGui, MainFrame, OpenCloseButton
 
 local function initializeSystem()
-    if not chosenLanguage then
-        warn("❌ No language selected!")
-        return
-    end
+    print("🔄 جاري تهيئة النظام باللغة العربية...")
     
-    print("🔄 Initializing system with language: " .. (chosenLanguage == Languages.English and "English" or "Arabic"))
-    
-    -- Create FOV Circle
+    -- إنشاء دائرة الرؤية
     createFOVCircle()
     
-    -- Create Control UI
+    -- إنشاء واجهة التحكم
     ControlGui = Instance.new("ScreenGui")
     ControlGui.Name = "AimbotControls"
     ControlGui.Parent = CoreGui
     ControlGui.ResetOnSpawn = false
 
-    -- Main Container
+    -- الحاوية الرئيسية
     MainFrame = Instance.new("Frame")
     MainFrame.Size = UDim2.new(0, 200, 0, 180)
     MainFrame.Position = UDim2.new(0, 10, 0.5, -90)
@@ -490,32 +356,32 @@ local function initializeSystem()
     UICorner.CornerRadius = UDim.new(0, 8)
     UICorner.Parent = MainFrame
 
-    -- Title
+    -- العنوان
     local Title = Instance.new("TextLabel")
     Title.Size = UDim2.new(1, 0, 0, 30)
     Title.Position = UDim2.new(0, 0, 0, 0)
     Title.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
     Title.BackgroundTransparency = 0.1
-    Title.Text = chosenLanguage.title
+    Title.Text = "الإصابة التلقائية - مجال الرؤية 100"
     Title.TextColor3 = Color3.fromRGB(255, 255, 255)
     Title.Font = Enum.Font.SourceSansBold
     Title.TextSize = 16
     Title.Parent = MainFrame
 
-    -- Toggle Buttons Container
+    -- حاوية مفاتيح التحكم
     local TogglesContainer = Instance.new("Frame")
     TogglesContainer.Size = UDim2.new(1, -20, 1, -60)
     TogglesContainer.Position = UDim2.new(0, 10, 0, 40)
     TogglesContainer.BackgroundTransparency = 1
     TogglesContainer.Parent = MainFrame
 
-    -- Aimbot Toggle
+    -- مفتاح الإصابة التلقائية
     local AimbotToggle = Instance.new("TextButton")
     AimbotToggle.Size = UDim2.new(1, 0, 0, 30)
     AimbotToggle.Position = UDim2.new(0, 0, 0, 0)
     AimbotToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
     AimbotToggle.BorderSizePixel = 0
-    AimbotToggle.Text = chosenLanguage.aimbot
+    AimbotToggle.Text = "الإصابة التلقائية: تشغيل"
     AimbotToggle.TextColor3 = Color3.fromRGB(0, 255, 0)
     AimbotToggle.Font = Enum.Font.SourceSansSemibold
     AimbotToggle.TextSize = 14
@@ -525,64 +391,64 @@ local function initializeSystem()
     ToggleCorner.CornerRadius = UDim.new(0, 6)
     ToggleCorner.Parent = AimbotToggle
 
-    -- ESP Toggle
+    -- مفتاح الرؤية عبر الجدران
     local ESPToggle = Instance.new("TextButton")
     ESPToggle.Size = UDim2.new(1, 0, 0, 30)
     ESPToggle.Position = UDim2.new(0, 0, 0, 35)
     ESPToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
     ESPToggle.BorderSizePixel = 0
-    ESPToggle.Text = chosenLanguage.esp
+    ESPToggle.Text = "الرؤية عبر الجدران: تشغيل"
     ESPToggle.TextColor3 = Color3.fromRGB(0, 255, 0)
     ESPToggle.Font = Enum.Font.SourceSansSemibold
     ESPToggle.TextSize = 14
     ESPToggle.Parent = TogglesContainer
     ToggleCorner:Clone().Parent = ESPToggle
 
-    -- FOV Circle Toggle
+    -- مفتاح دائرة الرؤية
     local FOVToggle = Instance.new("TextButton")
     FOVToggle.Size = UDim2.new(1, 0, 0, 30)
     FOVToggle.Position = UDim2.new(0, 0, 0, 70)
     FOVToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
     FOVToggle.BorderSizePixel = 0
-    FOVToggle.Text = chosenLanguage.fovCircle
+    FOVToggle.Text = "دائرة الرؤية: تشغيل"
     FOVToggle.TextColor3 = Color3.fromRGB(0, 255, 0)
     FOVToggle.Font = Enum.Font.SourceSansSemibold
     FOVToggle.TextSize = 14
     FOVToggle.Parent = TogglesContainer
     ToggleCorner:Clone().Parent = FOVToggle
 
-    -- Copyright Label
+    -- حقوق النشر
     local CopyrightLabel = Instance.new("TextLabel")
     CopyrightLabel.Size = UDim2.new(1, -20, 0, 20)
     CopyrightLabel.Position = UDim2.new(0, 10, 1, -25)
     CopyrightLabel.BackgroundTransparency = 1
-    CopyrightLabel.Text = chosenLanguage.copyright
+    CopyrightLabel.Text = "حقوق النشر ©️ 'MZ server' صنع بواسطة 'unknown boi'"
     CopyrightLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
     CopyrightLabel.Font = Enum.Font.SourceSans
     CopyrightLabel.TextSize = 10
     CopyrightLabel.TextXAlignment = Enum.TextXAlignment.Left
     CopyrightLabel.Parent = TogglesContainer
 
-    -- Close Button
+    -- زر الإغلاق
     local CloseButton = Instance.new("TextButton")
     CloseButton.Size = UDim2.new(0, 25, 0, 25)
     CloseButton.Position = UDim2.new(1, -30, 0, 5)
     CloseButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
     CloseButton.BorderSizePixel = 0
-    CloseButton.Text = chosenLanguage.close
+    CloseButton.Text = "X"
     CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     CloseButton.Font = Enum.Font.SourceSansBold
     CloseButton.TextSize = 14
     CloseButton.Parent = MainFrame
     ToggleCorner:Clone().Parent = CloseButton
 
-    -- Open/Close Button (MOVABLE)
+    -- زر الفتح/الإغلاق (قابل للتحريك)
     OpenCloseButton = Instance.new("TextButton")
     OpenCloseButton.Size = UDim2.new(0, 50, 0, 50)
     OpenCloseButton.Position = UDim2.new(0, 20, 0, 20)
     OpenCloseButton.BackgroundColor3 = Color3.fromRGB(40, 120, 200)
     OpenCloseButton.BorderSizePixel = 0
-    OpenCloseButton.Text = chosenLanguage.open
+    OpenCloseButton.Text = "☰"
     OpenCloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     OpenCloseButton.Font = Enum.Font.SourceSansBold
     OpenCloseButton.TextSize = 20
@@ -594,51 +460,39 @@ local function initializeSystem()
     OpenCloseCorner.Parent = OpenCloseButton
 
     -- =============================================
-    -- BUTTON FUNCTIONS
+    -- وظائف الأزرار
     -- =============================================
     AimbotToggle.MouseButton1Click:Connect(function()
         AimbotEnabled = not AimbotEnabled
-        local status = AimbotEnabled and "ON" or "OFF"
-        if chosenLanguage == Languages.English then
-            AimbotToggle.Text = "Aimbot: " .. status
-        else
-            AimbotToggle.Text = "الإصابة التلقائية: " .. (status == "ON" and "تشغيل" or "إيقاف")
-        end
+        local status = AimbotEnabled and "تشغيل" or "إيقاف"
+        AimbotToggle.Text = "الإصابة التلقائية: " .. status
         AimbotToggle.TextColor3 = AimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
     end)
 
     ESPToggle.MouseButton1Click:Connect(function()
         ESPEnabled = not ESPEnabled
-        local status = ESPEnabled and "ON" or "OFF"
-        if chosenLanguage == Languages.English then
-            ESPToggle.Text = "ESP: " .. status
-        else
-            ESPToggle.Text = "الرؤية عبر الجدران: " .. (status == "ON" and "تشغيل" or "إيقاف")
-        end
+        local status = ESPEnabled and "تشغيل" or "إيقاف"
+        ESPToggle.Text = "الرؤية عبر الجدران: " .. status
         ESPToggle.TextColor3 = ESPEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
     end)
 
     FOVToggle.MouseButton1Click:Connect(function()
         FOVCircleVisible = not FOVCircleVisible
-        local status = FOVCircleVisible and "ON" or "OFF"
-        if chosenLanguage == Languages.English then
-            FOVToggle.Text = "FOV Circle: " .. status
-        else
-            FOVToggle.Text = "دائرة الرؤية: " .. (status == "ON" and "تشغيل" or "إيقاف")
-        end
+        local status = FOVCircleVisible and "تشغيل" or "إيقاف"
+        FOVToggle.Text = "دائرة الرؤية: " .. status
         FOVToggle.TextColor3 = FOVCircleVisible and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
     end)
 
-    -- Open/Close Button Function
+    -- وظيفة زر الفتح/الإغلاق
     OpenCloseButton.MouseButton1Click:Connect(function()
         UIVisible = not UIVisible
         MainFrame.Visible = UIVisible
         
         if UIVisible then
-            OpenCloseButton.Text = chosenLanguage.closeText
+            OpenCloseButton.Text = "✕"
             OpenCloseButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
         else
-            OpenCloseButton.Text = chosenLanguage.open
+            OpenCloseButton.Text = "☰"
             OpenCloseButton.BackgroundColor3 = Color3.fromRGB(40, 120, 200)
         end
     end)
@@ -646,11 +500,11 @@ local function initializeSystem()
     CloseButton.MouseButton1Click:Connect(function()
         MainFrame.Visible = false
         UIVisible = false
-        OpenCloseButton.Text = chosenLanguage.open
+        OpenCloseButton.Text = "☰"
         OpenCloseButton.BackgroundColor3 = Color3.fromRGB(40, 120, 200)
     end)
 
-    -- Make Open/Close Button Draggable
+    -- جعل زر الفتح/الإغلاق قابلاً للسحب
     local dragging = false
     local dragStart, startPos
 
@@ -675,7 +529,7 @@ local function initializeSystem()
         end
     end)
 
-    -- Make Main Frame Draggable
+    -- جعل الإطار الرئيسي قابلاً للسحب
     local frameDragging = false
     local frameDragStart, frameStartPos
 
@@ -701,24 +555,24 @@ local function initializeSystem()
     end)
 
     -- =============================================
-    -- MAIN LOOP - INSTANT AIMBOT
+    -- الحلقة الرئيسية - الإصابة التلقائية الفورية
     -- =============================================
     RunService.RenderStepped:Connect(function()
-        -- UPDATE FOV CIRCLE
+        -- تحديث دائرة الرؤية
         updateFOVCircle()
         
-        -- INSTANT AIMBOT SYSTEM
+        -- نظام الإصابة التلقائية الفورية
         if AimbotEnabled then
             local newTarget = findBestTarget()
             
             if newTarget then
                 if not currentTarget or currentTarget ~= newTarget then
-                    -- NEW TARGET - INSTANT SNAP
+                    -- هدف جديد - تتبع فوري
                     instantHeadLock(newTarget)
                     currentTarget = newTarget
                     targetLock = true
                 else
-                    -- SAME TARGET - PERFECT FOLLOW
+                    -- نفس الهدف - تتبع مثالي
                     maintainHeadLock(currentTarget)
                 end
             else
@@ -727,22 +581,22 @@ local function initializeSystem()
             end
         end
         
-        -- ESP SYSTEM
+        -- نظام الرؤية عبر الجدران
         UpdateESP()
     end)
 
     -- =============================================
-    -- ALWAYS WORK (EVEN WHEN DEAD)
+    -- يعمل دائمًا (حتى عند الموت)
     -- =============================================
     player.CharacterAdded:Connect(function(character)
-        print(chosenLanguage.respawned)
+        print("إعادة ولادة الشخصية - النظام يعمل!")
     end)
 
     player.CharacterRemoving:Connect(function(character)
-        print(chosenLanguage.died)
+        print("وفاة الشخصية - النظام لا يزال يعمل!")
     end)
 
-    -- Cleanup
+    -- التنظيف
     Players.PlayerRemoving:Connect(function(leavingPlayer)
         if leavingPlayer == player then
             if ScreenGui then ScreenGui:Destroy() end
@@ -750,17 +604,17 @@ local function initializeSystem()
         end
     end)
 
-    print("🎯 " .. chosenLanguage.loaded)
-    print("⚡ INSTANT HEAD TRACKING - ULTRA FAST!")
-    print("✅ " .. chosenLanguage.redCircle)
-    print("✅ " .. chosenLanguage.working)
-    print("✅ " .. chosenLanguage.active)
-    print("📱 " .. chosenLanguage.copyright)
+    print("🎯 تم تحميل النظام!")
+    print("⚡ تتبع فوري للرأس - فائق السرعة!")
+    print("✅ دائرة رؤية حمراء بحجم 100 - تعمل!")
+    print("✅ النظام يعمل!")
+    print("✅ نشط!")
+    print("📱 حقوق النشر ©️ 'MZ server' صنع بواسطة 'unknown boi'")
 end
 
 -- =============================================
--- START SCRIPT
+-- بدء التشغيل
 -- =============================================
-print("Copyright ©️ 'MZ server' made by 'unknown boi'")
-print("Please select your language...")
-createLanguageSelection()
+print("حقوق النشر ©️ 'MZ server' صنع بواسطة 'unknown boi'")
+print("جاري تحميل النظام باللغة العربية...")
+initializeSystem()
