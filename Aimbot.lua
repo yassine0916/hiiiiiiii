@@ -1,4 +1,4 @@
--- Complete Aimbot & ESP System with FIXED FOV Circle
+-- Complete Aimbot & ESP System with WORKING FOV Circle
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -11,7 +11,7 @@ local AIM_SNAP_STRENGTH = 0.9
 local AUTO_AIM_ENABLED = true
 local RAINBOW_SPEED = 3
 
--- ESP Configuration
+-- ESP Configuration (Health removed)
 local Config = {
     BoxESP = true,
     BoxColor = Color3.fromRGB(255, 255, 255),
@@ -20,7 +20,7 @@ local Config = {
     
     NameESP = true,
     DistanceESP = true,
-    HealthESP = true,
+    HealthESP = false,  -- Disabled
     SkeletonESP = true,
     
     TeamCheck = true,
@@ -59,13 +59,13 @@ local function createFOVCircle()
     
     local success, circle = pcall(function()
         local drawing = Drawing.new("Circle")
-        drawing.Visible = false
+        drawing.Visible = true  -- Start visible to test
         drawing.Radius = FOV_RADIUS
         drawing.Thickness = 2
         drawing.Color = Color3.new(1, 0, 0)
         drawing.Filled = false
-        drawing.Transparency = 1
-        drawing.ZIndex = 1
+        drawing.Transparency = 0.8
+        drawing.ZIndex = 999
         return drawing
     end)
     
@@ -78,38 +78,52 @@ local function createFOVCircle()
     end
 end
 
--- Initialize FOV Circle
+-- Initialize FOV Circle immediately
 fovCircle = createFOVCircle()
 
 -- FIXED: Update FOV Circle Function
 local function updateFOVCircle()
     if not fovCircle then
+        print("🔄 Creating new FOV Circle...")
         fovCircle = createFOVCircle()
-        if not fovCircle then return end
+        if not fovCircle then 
+            print("❌ Failed to create FOV circle")
+            return 
+        end
     end
     
     if not Camera then 
         Camera = workspace.CurrentCamera
-        if not Camera then return end
+        if not Camera then 
+            print("❌ No camera found")
+            return 
+        end
     end
     
-    pcall(function()
+    local success, errorMsg = pcall(function()
         local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        
         fovCircle.Position = screenCenter
         fovCircle.Radius = FOV_RADIUS
         
         if FOVCircleVisible then
+            -- Rainbow color effect
             local rainbowTime = tick() * RAINBOW_SPEED
             local r = math.sin(rainbowTime) * 0.5 + 0.5
             local g = math.sin(rainbowTime + 2) * 0.5 + 0.5
             local b = math.sin(rainbowTime + 4) * 0.5 + 0.5
             fovCircle.Color = Color3.new(r, g, b)
             fovCircle.Visible = true
-            fovCircle.Transparency = 0.8
+            fovCircle.Thickness = 2
         else
             fovCircle.Visible = false
         end
     end)
+    
+    if not success then
+        print("❌ Error updating FOV circle: " .. tostring(errorMsg))
+        fovCircle = nil  -- Reset so it recreates next frame
+    end
 end
 
 -- AIMBOT FUNCTIONS
@@ -181,7 +195,7 @@ local function maintainHeadLock(targetHead)
     Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, headPosition)
 end
 
--- ESP FUNCTIONS
+-- ESP FUNCTIONS (Health removed)
 local function CreateDrawing(type, props)
     local obj = nil
     pcall(function()
@@ -242,6 +256,7 @@ local function GetDistance(pos)
     return success and math.floor(dist) or 0
 end
 
+-- ESP without health bars
 local function CreatePlayerESP(plr)
     local esp = {
         Box = CreateDrawing("Square", {
@@ -276,21 +291,8 @@ local function CreatePlayerESP(plr)
             Color = Color3.fromRGB(175, 175, 175),
             Transparency = Config.TextTrans,
             Visible = false
-        }),
-        HealthBar = CreateDrawing("Square", {
-            Thickness = 1,
-            Filled = true,
-            Transparency = Config.BoxTrans + 0.2,
-            Color = Color3.fromRGB(0, 255, 0),
-            Visible = false
-        }),
-        HealthBarBG = CreateDrawing("Square", {
-            Thickness = 1,
-            Filled = true,
-            Transparency = Config.BoxTrans - 0.2,
-            Color = Color3.fromRGB(40, 40, 40),
-            Visible = false
         })
+        -- Health bars removed
     }
     
     ESPObjects[plr] = esp
@@ -304,8 +306,6 @@ local function UpdateESP()
             esp.BoxOutline.Visible = false
             esp.Name.Visible = false
             esp.Distance.Visible = false
-            esp.HealthBar.Visible = false
-            esp.HealthBarBG.Visible = false
         end
         return
     end
@@ -318,7 +318,6 @@ local function UpdateESP()
                 if IsAlive(plr) and plr.Character:FindFirstChild("HumanoidRootPart") then
                     local char = plr.Character
                     local hrp = char.HumanoidRootPart
-                    local hum = char:FindFirstChild("Humanoid")
                     
                     local pos, vis = Camera:WorldToViewportPoint(hrp.Position)
                     local dist = GetDistance(hrp.Position)
@@ -363,46 +362,25 @@ local function UpdateESP()
                                 esp.Distance.Visible = false
                             end
                             
-                            if Config.HealthESP and hum then
-                                local hp = hum.Health / hum.MaxHealth
-                                local barSize = Vector2.new(3, boxSize.Y * hp)
-                                local barPos = boxPos + Vector2.new(-5, boxSize.Y * (1 - hp))
-                                
-                                esp.HealthBar.Size = barSize
-                                esp.HealthBar.Position = barPos
-                                esp.HealthBar.Color = Color3.fromRGB(255 - (255 * hp), (255 * hp), 0)
-                                esp.HealthBar.Visible = true
-                                
-                                esp.HealthBarBG.Size = Vector2.new(3, boxSize.Y)
-                                esp.HealthBarBG.Position = Vector2.new(boxPos.X - 5, boxPos.Y)
-                                esp.HealthBarBG.Visible = true
-                            else
-                                esp.HealthBar.Visible = false
-                                esp.HealthBarBG.Visible = false
-                            end
+                            -- Health bars removed
+                            
                         else
                             esp.Box.Visible = false
                             esp.BoxOutline.Visible = false
                             esp.Name.Visible = false
                             esp.Distance.Visible = false
-                            esp.HealthBar.Visible = false
-                            esp.HealthBarBG.Visible = false
                         end
                     else
                         esp.Box.Visible = false
                         esp.BoxOutline.Visible = false
                         esp.Name.Visible = false
                         esp.Distance.Visible = false
-                        esp.HealthBar.Visible = false
-                        esp.HealthBarBG.Visible = false
                     end
                 else
                     esp.Box.Visible = false
                     esp.BoxOutline.Visible = false
                     esp.Name.Visible = false
                     esp.Distance.Visible = false
-                    esp.HealthBar.Visible = false
-                    esp.HealthBarBG.Visible = false
                 end
             end)
         end
@@ -411,7 +389,7 @@ end
 
 -- MAIN LOOP
 RunService.RenderStepped:Connect(function(deltaTime)
-    -- Update FOV Circle (FIXED)
+    -- Update FOV Circle (FIXED - called every frame)
     updateFOVCircle()
     
     -- Aimbot System
@@ -444,8 +422,8 @@ ScreenGui.ResetOnSpawn = false
 
 -- Main Container (starts hidden)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 280)
-MainFrame.Position = UDim2.new(0, 10, 0.5, -140)
+MainFrame.Size = UDim2.new(0, 220, 0, 230)  -- Smaller since health removed
+MainFrame.Position = UDim2.new(0, 10, 0.5, -115)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MainFrame.BackgroundTransparency = 0.2
 MainFrame.BorderSizePixel = 0
@@ -479,7 +457,7 @@ TitleCorner.Parent = Title
 
 -- Toggle Buttons Container
 local TogglesContainer = Instance.new("Frame")
-TogglesContainer.Size = UDim2.new(1, -20, 1, -100)
+TogglesContainer.Size = UDim2.new(1, -20, 1, -50)
 TogglesContainer.Position = UDim2.new(0, 10, 0, 50)
 TogglesContainer.BackgroundTransparency = 1
 TogglesContainer.Parent = MainFrame
@@ -533,7 +511,7 @@ FOVToggle.Parent = TogglesContainer
 ToggleCorner:Clone().Parent = FOVToggle
 ToggleStroke:Clone().Parent = FOVToggle
 
--- FOV Size Slider (FIXED)
+-- FOV Size Slider
 local FOVSliderContainer = Instance.new("Frame")
 FOVSliderContainer.Size = UDim2.new(1, 0, 0, 50)
 FOVSliderContainer.Position = UDim2.new(0, 0, 0, 150)
@@ -623,17 +601,6 @@ ESPToggle.MouseButton1Click:Connect(function()
     ESPEnabled = not ESPEnabled
     ESPToggle.Text = "ESP: " .. (ESPEnabled and "ON" or "OFF")
     ESPToggle.TextColor3 = ESPEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
-    
-    if not ESPEnabled then
-        for _, esp in pairs(ESPObjects) do
-            esp.Box.Visible = false
-            esp.BoxOutline.Visible = false
-            esp.Name.Visible = false
-            esp.Distance.Visible = false
-            esp.HealthBar.Visible = false
-            esp.HealthBarBG.Visible = false
-        end
-    end
 end)
 
 FOVToggle.MouseButton1Click:Connect(function()
@@ -643,28 +610,25 @@ FOVToggle.MouseButton1Click:Connect(function()
     print("FOV Circle: " .. (FOVCircleVisible and "VISIBLE" or "HIDDEN"))
 end)
 
--- FIXED: FOV Slider Function
+-- FOV Slider Function
 local function updateFOVSize(value)
     FOV_RADIUS = math.floor(value)
     FOVSliderLabel.Text = "FOV Size: " .. FOV_RADIUS
     local percentage = (FOV_RADIUS - 20) / (150 - 20)
     FOVSliderFill.Size = UDim2.new(percentage, 0, 1, 0)
     FOVSliderButton.Position = UDim2.new(percentage, -10, 0, 0)
-    print("FOV Size updated to: " .. FOV_RADIUS)
 end
 
--- FIXED: Slider dragging
+-- Slider dragging
 local draggingFOV = false
 
 FOVSliderButton.MouseButton1Down:Connect(function()
     draggingFOV = true
-    print("Slider drag started")
 end)
 
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         draggingFOV = false
-        print("Slider drag ended")
     end
 end)
 
@@ -675,25 +639,6 @@ UserInputService.InputChanged:Connect(function(input)
         local mouseX = input.Position.X
         
         local relativeX = math.clamp(mouseX - sliderAbsolutePosition, 0, sliderAbsoluteSize)
-        local percentage = relativeX / sliderAbsoluteSize
-        local newValue = 20 + percentage * (150 - 20)
-        
-        updateFOVSize(newValue)
-    end
-end)
-
--- Touch support for slider
-FOVSliderButton.TouchLongPress:Connect(function()
-    draggingFOV = true
-end)
-
-FOVSlider.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        local sliderAbsolutePosition = FOVSlider.AbsolutePosition.X
-        local sliderAbsoluteSize = FOVSlider.AbsoluteSize.X
-        local touchX = input.Position.X
-        
-        local relativeX = math.clamp(touchX - sliderAbsolutePosition, 0, sliderAbsoluteSize)
         local percentage = relativeX / sliderAbsoluteSize
         local newValue = 20 + percentage * (150 - 20)
         
@@ -780,8 +725,8 @@ print("🎯 AIMBOT TESTING SYSTEM LOADED! 🎯")
 print("=====================================")
 print("Features:")
 print("- 🔥 Instant Head-Lock Aimbot")
-print("- 🎯 ESP with Box, Name, Distance, Health")
-print("- 🌈 Rainbow FOV Circle (Toggle to show)")
+print("- 🎯 ESP with Box, Name, Distance (No Health)")
+print("- 🌈 Rainbow FOV Circle")
 print("- 📱 Phone-Friendly UI")
 print("- 💀 Works when dead/respawning")
 print("")
@@ -790,5 +735,4 @@ print("- Click the BLUE CIRCLE button to open/close UI")
 print("- Toggle Aimbot: ON/OFF")
 print("- Toggle ESP: ON/OFF") 
 print("- Toggle FOV Circle: Show/Hide")
-print("- FOV Size Slider: 20-150 (DRAG THE SLIDER)")
-print("- Drag to move UI")
+print("- FOV Size Slider: 20-150")
