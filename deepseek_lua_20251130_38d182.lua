@@ -455,11 +455,16 @@ local function createLanguageSelection()
 end
 
 -- =============================================
--- MAIN SYSTEM
+-- MAIN SYSTEM INITIALIZATION
 -- =============================================
 local ControlGui, MainFrame, OpenCloseButton
 
 local function initializeSystem()
+    if not chosenLanguage then
+        warn("❌ No language selected!")
+        return
+    end
+    
     print("🔄 Initializing system with language: " .. (chosenLanguage == Languages.English and "English" or "Arabic"))
     
     -- Create FOV Circle
