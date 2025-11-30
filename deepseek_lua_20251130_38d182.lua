@@ -1,11 +1,10 @@
--- COMPLETE AIMBOT & ESP WITH COPYRIGHT
+-- COMPLETE AIMBOT & ESP WITH INSTANT HEAD TRACKING
 -- Copyright ©️ "MZ server" made by "unknown boi"
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
-local TweenService = game:GetService("TweenService")
 
 -- Language Selection
 local chosenLanguage = nil
@@ -53,6 +52,7 @@ local Languages = {
 -- Aimbot Configuration
 local FOV_RADIUS = 100
 local AUTO_AIM_ENABLED = true
+local AIM_STRENGTH = 1.0  -- INSTANT SNAP
 
 -- ESP Configuration
 local Config = {
@@ -67,6 +67,7 @@ local Config = {
 local player = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local currentTarget = nil
+local targetLock = false
 
 -- UI Toggles
 local AimbotEnabled = true
@@ -218,7 +219,7 @@ local function updateFOVCircle()
 end
 
 -- =============================================
--- AIMBOT FUNCTIONS
+-- INSTANT AIMBOT FUNCTIONS
 -- =============================================
 local function isTargetVisible(targetPart)
     if not targetPart or not Camera then return false end
@@ -275,9 +276,19 @@ local function findBestTarget()
     return bestTarget
 end
 
+-- INSTANT HEAD SNAP AND FOLLOW
 local function instantHeadLock(targetHead)
     if not targetHead or not Camera then return end
     local headPosition = targetHead.Position
+    -- INSTANT SNAP - NO SMOOTHING
+    Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, headPosition)
+end
+
+-- PERFECT HEAD TRACKING
+local function maintainHeadLock(targetHead)
+    if not targetHead or not Camera then return end
+    local headPosition = targetHead.Position
+    -- INSTANT FOLLOW - STAYS ON HEAD
     Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, headPosition)
 end
 
@@ -449,6 +460,8 @@ end
 local ControlGui, MainFrame, OpenCloseButton
 
 local function initializeSystem()
+    print("🔄 Initializing system with language: " .. (chosenLanguage == Languages.English and "English" or "Arabic"))
+    
     -- Create FOV Circle
     createFOVCircle()
     
@@ -460,7 +473,7 @@ local function initializeSystem()
 
     -- Main Container
     MainFrame = Instance.new("Frame")
-    MainFrame.Size = UDim2.new(0, 200, 0, 180)  -- Increased height for copyright
+    MainFrame.Size = UDim2.new(0, 200, 0, 180)
     MainFrame.Position = UDim2.new(0, 10, 0.5, -90)
     MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
     MainFrame.BackgroundTransparency = 0.3
@@ -581,21 +594,33 @@ local function initializeSystem()
     AimbotToggle.MouseButton1Click:Connect(function()
         AimbotEnabled = not AimbotEnabled
         local status = AimbotEnabled and "ON" or "OFF"
-        AimbotToggle.Text = chosenLanguage.aimbot:gsub("ON", status):gsub("OFF", status)
+        if chosenLanguage == Languages.English then
+            AimbotToggle.Text = "Aimbot: " .. status
+        else
+            AimbotToggle.Text = "الإصابة التلقائية: " .. (status == "ON" and "تشغيل" or "إيقاف")
+        end
         AimbotToggle.TextColor3 = AimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
     end)
 
     ESPToggle.MouseButton1Click:Connect(function()
         ESPEnabled = not ESPEnabled
         local status = ESPEnabled and "ON" or "OFF"
-        ESPToggle.Text = chosenLanguage.esp:gsub("ON", status):gsub("OFF", status)
+        if chosenLanguage == Languages.English then
+            ESPToggle.Text = "ESP: " .. status
+        else
+            ESPToggle.Text = "الرؤية عبر الجدران: " .. (status == "ON" and "تشغيل" or "إيقاف")
+        end
         ESPToggle.TextColor3 = ESPEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
     end)
 
     FOVToggle.MouseButton1Click:Connect(function()
         FOVCircleVisible = not FOVCircleVisible
         local status = FOVCircleVisible and "ON" or "OFF"
-        FOVToggle.Text = chosenLanguage.fovCircle:gsub("ON", status):gsub("OFF", status)
+        if chosenLanguage == Languages.English then
+            FOVToggle.Text = "FOV Circle: " .. status
+        else
+            FOVToggle.Text = "دائرة الرؤية: " .. (status == "ON" and "تشغيل" or "إيقاف")
+        end
         FOVToggle.TextColor3 = FOVCircleVisible and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
     end)
 
@@ -671,21 +696,29 @@ local function initializeSystem()
     end)
 
     -- =============================================
-    -- MAIN LOOP
+    -- MAIN LOOP - INSTANT AIMBOT
     -- =============================================
     RunService.RenderStepped:Connect(function()
         -- UPDATE FOV CIRCLE
         updateFOVCircle()
         
-        -- AIMBOT SYSTEM
+        -- INSTANT AIMBOT SYSTEM
         if AimbotEnabled then
             local newTarget = findBestTarget()
             
             if newTarget then
-                instantHeadLock(newTarget)
-                currentTarget = newTarget
+                if not currentTarget or currentTarget ~= newTarget then
+                    -- NEW TARGET - INSTANT SNAP
+                    instantHeadLock(newTarget)
+                    currentTarget = newTarget
+                    targetLock = true
+                else
+                    -- SAME TARGET - PERFECT FOLLOW
+                    maintainHeadLock(currentTarget)
+                end
             else
                 currentTarget = nil
+                targetLock = false
             end
         end
         
@@ -713,6 +746,7 @@ local function initializeSystem()
     end)
 
     print("🎯 " .. chosenLanguage.loaded)
+    print("⚡ INSTANT HEAD TRACKING - ULTRA FAST!")
     print("✅ " .. chosenLanguage.redCircle)
     print("✅ " .. chosenLanguage.working)
     print("✅ " .. chosenLanguage.active)
@@ -722,7 +756,6 @@ end
 -- =============================================
 -- START SCRIPT
 -- =============================================
-createLanguageSelection()
-
 print("Copyright ©️ 'MZ server' made by 'unknown boi'")
 print("Please select your language...")
+createLanguageSelection()
