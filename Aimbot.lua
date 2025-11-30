@@ -20,8 +20,8 @@ local Config = {
     
     NameESP = true,
     DistanceESP = true,
-    HealthESP = false,  -- Disabled
-    SkeletonESP = true,
+    HealthESP = false,
+    SkeletonESP = false,
     
     TeamCheck = true,
     AllyColor = Color3.fromRGB(0, 255, 140),
@@ -50,79 +50,63 @@ local UIVisible = false
 -- ESP Objects
 local ESPObjects = {}
 
--- FIXED: Create FOV Circle Function
+-- SIMPLE FOV CIRCLE CREATION
 local function createFOVCircle()
     if not Drawing then 
-        warn("Drawing library not available")
+        print("❌ Drawing library not available")
         return nil
     end
     
     local success, circle = pcall(function()
         local drawing = Drawing.new("Circle")
-        drawing.Visible = true  -- Start visible to test
+        drawing.Visible = false
         drawing.Radius = FOV_RADIUS
         drawing.Thickness = 2
         drawing.Color = Color3.new(1, 0, 0)
         drawing.Filled = false
         drawing.Transparency = 0.8
-        drawing.ZIndex = 999
         return drawing
     end)
     
     if success and circle then
-        print("✅ FOV Circle created successfully")
+        print("✅ FOV Circle created successfully!")
         return circle
     else
-        warn("❌ Failed to create FOV circle")
+        print("❌ Failed to create FOV circle")
         return nil
     end
 end
 
--- Initialize FOV Circle immediately
+-- Initialize FOV Circle
 fovCircle = createFOVCircle()
 
--- FIXED: Update FOV Circle Function
+-- SIMPLE FOV UPDATE
 local function updateFOVCircle()
     if not fovCircle then
-        print("🔄 Creating new FOV Circle...")
         fovCircle = createFOVCircle()
-        if not fovCircle then 
-            print("❌ Failed to create FOV circle")
-            return 
-        end
+        if not fovCircle then return end
     end
     
     if not Camera then 
         Camera = workspace.CurrentCamera
-        if not Camera then 
-            print("❌ No camera found")
-            return 
-        end
+        if not Camera then return end
     end
     
-    local success, errorMsg = pcall(function()
-        local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-        
-        fovCircle.Position = screenCenter
-        fovCircle.Radius = FOV_RADIUS
-        
-        if FOVCircleVisible then
-            -- Rainbow color effect
-            local rainbowTime = tick() * RAINBOW_SPEED
-            local r = math.sin(rainbowTime) * 0.5 + 0.5
-            local g = math.sin(rainbowTime + 2) * 0.5 + 0.5
-            local b = math.sin(rainbowTime + 4) * 0.5 + 0.5
-            fovCircle.Color = Color3.new(r, g, b)
-            fovCircle.Visible = true
-            fovCircle.Thickness = 2
-        else
-            fovCircle.Visible = false
-        end
-    end)
+    -- Always update position
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    fovCircle.Position = screenCenter
+    fovCircle.Radius = FOV_RADIUS
     
-    if not success then
-        print("❌ Error updating FOV circle: " .. tostring(errorMsg))
-        fovCircle = nil  -- Reset so it recreates next frame
+    -- Update visibility and colors
+    if FOVCircleVisible then
+        local rainbowTime = tick() * RAINBOW_SPEED
+        local r = math.sin(rainbowTime) * 0.5 + 0.5
+        local g = math.sin(rainbowTime + 2) * 0.5 + 0.5
+        local b = math.sin(rainbowTime + 4) * 0.5 + 0.5
+        fovCircle.Color = Color3.new(r, g, b)
+        fovCircle.Visible = true
+    else
+        fovCircle.Visible = false
     end
 end
 
@@ -195,7 +179,7 @@ local function maintainHeadLock(targetHead)
     Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, headPosition)
 end
 
--- ESP FUNCTIONS (Health removed)
+-- ESP FUNCTIONS (No Health)
 local function CreateDrawing(type, props)
     local obj = nil
     pcall(function()
@@ -292,7 +276,6 @@ local function CreatePlayerESP(plr)
             Transparency = Config.TextTrans,
             Visible = false
         })
-        -- Health bars removed
     }
     
     ESPObjects[plr] = esp
@@ -361,9 +344,6 @@ local function UpdateESP()
                             else
                                 esp.Distance.Visible = false
                             end
-                            
-                            -- Health bars removed
-                            
                         else
                             esp.Box.Visible = false
                             esp.BoxOutline.Visible = false
@@ -388,8 +368,8 @@ local function UpdateESP()
 end
 
 -- MAIN LOOP
-RunService.RenderStepped:Connect(function(deltaTime)
-    -- Update FOV Circle (FIXED - called every frame)
+RunService.RenderStepped:Connect(function()
+    -- Update FOV Circle (SIMPLE AND RELIABLE)
     updateFOVCircle()
     
     -- Aimbot System
@@ -414,16 +394,16 @@ RunService.RenderStepped:Connect(function(deltaTime)
     UpdateESP()
 end)
 
--- PHONE-FRIENDLY UI
+-- SIMPLE UI
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "AimbotTesting"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Main Container (starts hidden)
+-- Main Container
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 230)  -- Smaller since health removed
-MainFrame.Position = UDim2.new(0, 10, 0.5, -115)
+MainFrame.Size = UDim2.new(0, 200, 0, 200)
+MainFrame.Position = UDim2.new(0, 10, 0.5, -100)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MainFrame.BackgroundTransparency = 0.2
 MainFrame.BorderSizePixel = 0
@@ -433,11 +413,6 @@ MainFrame.Parent = ScreenGui
 local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 12)
 UICorner.Parent = MainFrame
-
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = Color3.fromRGB(80, 80, 90)
-UIStroke.Thickness = 2
-UIStroke.Parent = MainFrame
 
 -- Title
 local Title = Instance.new("TextLabel")
@@ -450,10 +425,6 @@ Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 18
 Title.Parent = MainFrame
-
-local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 12)
-TitleCorner.Parent = Title
 
 -- Toggle Buttons Container
 local TogglesContainer = Instance.new("Frame")
@@ -478,11 +449,6 @@ local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 8)
 ToggleCorner.Parent = AimbotToggle
 
-local ToggleStroke = Instance.new("UIStroke")
-ToggleStroke.Color = Color3.fromRGB(70, 70, 80)
-ToggleStroke.Thickness = 1
-ToggleStroke.Parent = AimbotToggle
-
 -- ESP Toggle
 local ESPToggle = Instance.new("TextButton")
 ESPToggle.Size = UDim2.new(1, 0, 0, 40)
@@ -495,7 +461,6 @@ ESPToggle.Font = Enum.Font.SourceSansSemibold
 ESPToggle.TextSize = 16
 ESPToggle.Parent = TogglesContainer
 ToggleCorner:Clone().Parent = ESPToggle
-ToggleStroke:Clone().Parent = ESPToggle
 
 -- FOV Circle Toggle
 local FOVToggle = Instance.new("TextButton")
@@ -503,56 +468,12 @@ FOVToggle.Size = UDim2.new(1, 0, 0, 40)
 FOVToggle.Position = UDim2.new(0, 0, 0, 100)
 FOVToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
 FOVToggle.BorderSizePixel = 0
-FOVToggle.Text = "Show FOV Circle: OFF"
+FOVToggle.Text = "FOV Circle: OFF"
 FOVToggle.TextColor3 = Color3.fromRGB(255, 50, 50)
 FOVToggle.Font = Enum.Font.SourceSansSemibold
 FOVToggle.TextSize = 16
 FOVToggle.Parent = TogglesContainer
 ToggleCorner:Clone().Parent = FOVToggle
-ToggleStroke:Clone().Parent = FOVToggle
-
--- FOV Size Slider
-local FOVSliderContainer = Instance.new("Frame")
-FOVSliderContainer.Size = UDim2.new(1, 0, 0, 50)
-FOVSliderContainer.Position = UDim2.new(0, 0, 0, 150)
-FOVSliderContainer.BackgroundTransparency = 1
-FOVSliderContainer.Parent = TogglesContainer
-
-local FOVSliderLabel = Instance.new("TextLabel")
-FOVSliderLabel.Size = UDim2.new(1, 0, 0, 20)
-FOVSliderLabel.Position = UDim2.new(0, 0, 0, 0)
-FOVSliderLabel.BackgroundTransparency = 1
-FOVSliderLabel.Text = "FOV Size: " .. FOV_RADIUS
-FOVSliderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-FOVSliderLabel.Font = Enum.Font.SourceSansSemibold
-FOVSliderLabel.TextSize = 14
-FOVSliderLabel.TextXAlignment = Enum.TextXAlignment.Left
-FOVSliderLabel.Parent = FOVSliderContainer
-
-local FOVSlider = Instance.new("Frame")
-FOVSlider.Size = UDim2.new(1, 0, 0, 20)
-FOVSlider.Position = UDim2.new(0, 0, 0, 25)
-FOVSlider.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
-FOVSlider.BorderSizePixel = 0
-FOVSlider.Parent = FOVSliderContainer
-ToggleCorner:Clone().Parent = FOVSlider
-
-local FOVSliderFill = Instance.new("Frame")
-FOVSliderFill.Size = UDim2.new((FOV_RADIUS - 20) / (150 - 20), 0, 1, 0)
-FOVSliderFill.Position = UDim2.new(0, 0, 0, 0)
-FOVSliderFill.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-FOVSliderFill.BorderSizePixel = 0
-FOVSliderFill.Parent = FOVSlider
-ToggleCorner:Clone().Parent = FOVSliderFill
-
-local FOVSliderButton = Instance.new("TextButton")
-FOVSliderButton.Size = UDim2.new(0, 20, 0, 20)
-FOVSliderButton.Position = UDim2.new((FOV_RADIUS - 20) / (150 - 20), -10, 0, 0)
-FOVSliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-FOVSliderButton.BorderSizePixel = 0
-FOVSliderButton.Text = ""
-FOVSliderButton.Parent = FOVSlider
-ToggleCorner:Clone().Parent = FOVSliderButton
 
 -- Close Button
 local CloseButton = Instance.new("TextButton")
@@ -578,17 +499,11 @@ OpenCloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 OpenCloseButton.Font = Enum.Font.SourceSansBold
 OpenCloseButton.TextSize = 24
 OpenCloseButton.Visible = true
-OpenCloseButton.ZIndex = 10
 OpenCloseButton.Parent = ScreenGui
 
 local OpenCloseCorner = Instance.new("UICorner")
 OpenCloseCorner.CornerRadius = UDim.new(1, 0)
 OpenCloseCorner.Parent = OpenCloseButton
-
-local OpenCloseStroke = Instance.new("UIStroke")
-OpenCloseStroke.Color = Color3.fromRGB(255, 255, 255)
-OpenCloseStroke.Thickness = 2
-OpenCloseStroke.Parent = OpenCloseButton
 
 -- Toggle Functions
 AimbotToggle.MouseButton1Click:Connect(function()
@@ -605,44 +520,13 @@ end)
 
 FOVToggle.MouseButton1Click:Connect(function()
     FOVCircleVisible = not FOVCircleVisible
-    FOVToggle.Text = "Show FOV Circle: " .. (FOVCircleVisible and "ON" or "OFF")
+    FOVToggle.Text = "FOV Circle: " .. (FOVCircleVisible and "ON" or "OFF")
     FOVToggle.TextColor3 = FOVCircleVisible and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
-    print("FOV Circle: " .. (FOVCircleVisible and "VISIBLE" or "HIDDEN"))
-end)
-
--- FOV Slider Function
-local function updateFOVSize(value)
-    FOV_RADIUS = math.floor(value)
-    FOVSliderLabel.Text = "FOV Size: " .. FOV_RADIUS
-    local percentage = (FOV_RADIUS - 20) / (150 - 20)
-    FOVSliderFill.Size = UDim2.new(percentage, 0, 1, 0)
-    FOVSliderButton.Position = UDim2.new(percentage, -10, 0, 0)
-end
-
--- Slider dragging
-local draggingFOV = false
-
-FOVSliderButton.MouseButton1Down:Connect(function()
-    draggingFOV = true
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingFOV = false
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if draggingFOV and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local sliderAbsolutePosition = FOVSlider.AbsolutePosition.X
-        local sliderAbsoluteSize = FOVSlider.AbsoluteSize.X
-        local mouseX = input.Position.X
-        
-        local relativeX = math.clamp(mouseX - sliderAbsolutePosition, 0, sliderAbsoluteSize)
-        local percentage = relativeX / sliderAbsoluteSize
-        local newValue = 20 + percentage * (150 - 20)
-        
-        updateFOVSize(newValue)
+    
+    if FOVCircleVisible then
+        print("🌈 FOV Circle is now VISIBLE - Look at screen center!")
+    else
+        print("🎯 FOV Circle is now HIDDEN")
     end
 end)
 
@@ -681,12 +565,6 @@ MainFrame.InputBegan:Connect(function(input)
         dragging = true
         dragStart = input.Position
         startPos = MainFrame.Position
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
     end
 end)
 
@@ -699,6 +577,12 @@ end)
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         update(input)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
     end
 end)
 
@@ -730,9 +614,8 @@ print("- 🌈 Rainbow FOV Circle")
 print("- 📱 Phone-Friendly UI")
 print("- 💀 Works when dead/respawning")
 print("")
-print("UI Controls:")
-print("- Click the BLUE CIRCLE button to open/close UI")
-print("- Toggle Aimbot: ON/OFF")
-print("- Toggle ESP: ON/OFF") 
-print("- Toggle FOV Circle: Show/Hide")
-print("- FOV Size Slider: 20-150")
+print("To test FOV Circle:")
+print("1. Click the BLUE CIRCLE button")
+print("2. Click 'FOV Circle: OFF' to turn it ON")
+print("3. Look at screen center - Rainbow circle should appear!")
+print("4. If not working, check console for error messages")
