@@ -370,7 +370,7 @@ local function initializeSystem()
     Title.Position = UDim2.new(0, 0, 0, 0)
     Title.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
     Title.BackgroundTransparency = 0.1
-    Title.Text = "MZ Hub - مركز التحكم"
+    Title.Text = "MZ Hub "
     Title.TextColor3 = Color3.fromRGB(255, 255, 255)
     Title.Font = Enum.Font.SourceSansBold
     Title.TextSize = 16
@@ -562,7 +562,7 @@ local function initializeSystem()
                 Rotation = 0
             })
             tween:Play()
-            ButtonImage.Image = "rbxassetid://10734996320"  -- إعادة الصورة الأصلية
+            ButtonImage.Image = "rbxassetid://118614421027521"  -- إعادة الصورة الأصلية
         end
     end)
 
@@ -576,7 +576,7 @@ local function initializeSystem()
             Rotation = 0
         })
         tween:Play()
-        ButtonImage.Image = "rbxassetid://10734996320"
+        ButtonImage.Image = "rbxassetid://118614421027521"
     end)
 
     -- جعل زر الفتح/الإغلاق قابلاً للسحب
