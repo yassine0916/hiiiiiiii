@@ -1,450 +1,435 @@
--- MZ Hub - Simple Working Version
--- Copyright: MZ Hub by Unknown Boi
+-- MZ Hub - By Unknown Boi
+-- واجهة MZ Hub - صنعت بواسطة Unknown Boi
 
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
-local guiVisible = false
-local espEnabled = false
-local hitboxEnabled = false
+local camera = workspace.CurrentCamera
 
--- Create the Open Button FIRST
-local OpenButton = Instance.new("TextButton")
-OpenButton.Name = "MZOpenButton"
-OpenButton.Parent = game.CoreGui
-OpenButton.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
-OpenButton.BorderSizePixel = 0
-OpenButton.Position = UDim2.new(0, 20, 0.5, -30)
-OpenButton.Size = UDim2.new(0, 60, 0, 60)
-OpenButton.Font = Enum.Font.GothamBold
-OpenButton.Text = "MZ"
-OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenButton.TextSize = 18
-OpenButton.ZIndex = 999
-OpenButton.Visible = true
+-- اللغة العربية
+local ArabicText = {
+    MainTitle = "MZ Hub",
+    Copyright = "صنع بواسطة Unknown Boi",
+    OpenClose = "فتح/إغلاق",
+    ESP = "الرؤية عبر الجدران",
+    Hitbox = "توسيع هيت بوكس",
+    Color = "تغيير اللون",
+    On = "تشغيل",
+    Off = "إيقاف",
+    Red = "أحمر",
+    Green = "أخضر",
+    Blue = "أزرق",
+    Yellow = "أصفر",
+    Purple = "بنفسجي"
+}
 
--- Make it round
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(1, 0)
-corner.Parent = OpenButton
+-- المتغيرات
+local ESPEnabled = false
+local HitboxEnabled = false
+local ESPColor = Color3.fromRGB(255, 0, 0)
+local HitboxColor = Color3.fromRGB(255, 0, 0)
+local ESPInstances = {}
+local HitboxInstances = {}
 
--- Add outline
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(255, 255, 255)
-stroke.Thickness = 2
-stroke.Parent = OpenButton
+-- إنشاء الواجهة الرئيسية
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MZHub"
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-print("MZ Button created!")
+-- زر الفتح/الإغلاق الرئيسي
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Size = UDim2.new(0, 100, 0, 50)
+ToggleButton.Position = UDim2.new(0, 10, 0.5, -25)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Text = ArabicText.OpenClose
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.TextSize = 14
+ToggleButton.BorderSizePixel = 0
+ToggleButton.ZIndex = 10
+ToggleButton.Parent = ScreenGui
 
--- Create Main GUI
-local MZHub = Instance.new("ScreenGui")
-MZHub.Name = "MZHub"
-MZHub.Parent = game.CoreGui
-MZHub.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
+-- النافذة الرئيسية
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Parent = MZHub
-MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+MainFrame.Size = UDim2.new(0, 300, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
-MainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
-MainFrame.Size = UDim2.new(0, 300, 0, 350)
 MainFrame.Visible = false
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
 
--- Make corners round
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 12)
-mainCorner.Parent = MainFrame
-
--- Top Bar
-local TopBar = Instance.new("Frame")
-TopBar.Name = "TopBar"
-TopBar.Parent = MainFrame
-TopBar.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-TopBar.BorderSizePixel = 0
-TopBar.Size = UDim2.new(1, 0, 0, 40)
-
-local topBarCorner = Instance.new("UICorner")
-topBarCorner.CornerRadius = UDim.new(0, 12)
-topBarCorner.Parent = TopBar
-
--- Title
+-- العنوان
 local Title = Instance.new("TextLabel")
 Title.Name = "Title"
-Title.Parent = TopBar
-Title.BackgroundTransparency = 1
-Title.Position = UDim2.new(0, 15, 0, 0)
-Title.Size = UDim2.new(0, 200, 1, 0)
-Title.Font = Enum.Font.GothamBold
-Title.Text = "MZ Hub - مركز إم زد"
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Position = UDim2.new(0, 0, 0, 0)
+Title.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 16
-Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Text = ArabicText.MainTitle
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 20
+Title.BorderSizePixel = 0
+Title.Parent = MainFrame
 
--- Close Button
-local CloseButton = Instance.new("TextButton")
-CloseButton.Name = "CloseButton"
-CloseButton.Parent = TopBar
-CloseButton.BackgroundColor3 = Color3.fromRGB(220, 80, 80)
-CloseButton.BorderSizePixel = 0
-CloseButton.Position = UDim2.new(1, -35, 0.5, -10)
-CloseButton.Size = UDim2.new(0, 20, 0, 20)
-CloseButton.Font = Enum.Font.GothamBold
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.TextSize = 14
+-- حقوق النشر
+local Copyright = Instance.new("TextLabel")
+Copyright.Name = "Copyright"
+Copyright.Size = UDim2.new(1, 0, 0, 20)
+Copyright.Position = UDim2.new(0, 0, 0, 40)
+Copyright.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Copyright.TextColor3 = Color3.fromRGB(200, 200, 200)
+Copyright.Text = ArabicText.Copyright
+Copyright.Font = Enum.Font.Gotham
+Copyright.TextSize = 12
+Copyright.BorderSizePixel = 0
+Copyright.Parent = MainFrame
 
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(1, 0)
-closeCorner.Parent = CloseButton
+-- إطار المحتوى
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, -20, 1, -80)
+ContentFrame.Position = UDim2.new(0, 10, 0, 70)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
 
--- Content Area
-local Content = Instance.new("Frame")
-Content.Name = "Content"
-Content.Parent = MainFrame
-Content.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-Content.BorderSizePixel = 0
-Content.Position = UDim2.new(0, 10, 0, 50)
-Content.Size = UDim2.new(1, -20, 1, -60)
+-- قسم ESP
+local ESPFrame = Instance.new("Frame")
+ESPFrame.Name = "ESPFrame"
+ESPFrame.Size = UDim2.new(1, 0, 0, 100)
+ESPFrame.Position = UDim2.new(0, 0, 0, 0)
+ESPFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ESPFrame.BorderSizePixel = 0
+ESPFrame.Parent = ContentFrame
 
-local contentCorner = Instance.new("UICorner")
-contentCorner.CornerRadius = UDim.new(0, 8)
-contentCorner.Parent = Content
+local ESPTitle = Instance.new("TextLabel")
+ESPTitle.Name = "ESPTitle"
+ESPTitle.Size = UDim2.new(1, 0, 0, 30)
+ESPTitle.Position = UDim2.new(0, 0, 0, 0)
+ESPTitle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ESPTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+ESPTitle.Text = ArabicText.ESP
+ESPTitle.Font = Enum.Font.GothamBold
+ESPTitle.TextSize = 16
+ESPTitle.BorderSizePixel = 0
+ESPTitle.Parent = ESPFrame
 
--- ESP Toggle Button
 local ESPToggle = Instance.new("TextButton")
 ESPToggle.Name = "ESPToggle"
-ESPToggle.Parent = Content
-ESPToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-ESPToggle.BorderSizePixel = 0
-ESPToggle.Position = UDim2.new(0.1, 0, 0.1, 0)
-ESPToggle.Size = UDim2.new(0.8, 0, 0, 50)
-ESPToggle.Font = Enum.Font.Gotham
-ESPToggle.Text = "تفعيل ESP - تشغيل الرؤية"
+ESPToggle.Size = UDim2.new(0, 80, 0, 30)
+ESPToggle.Position = UDim2.new(0, 10, 0, 40)
+ESPToggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
 ESPToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+ESPToggle.Text = ArabicText.Off
+ESPToggle.Font = Enum.Font.GothamBold
 ESPToggle.TextSize = 14
-ESPToggle.TextWrapped = true
+ESPToggle.BorderSizePixel = 0
+ESPToggle.Parent = ESPFrame
 
-local espCorner = Instance.new("UICorner")
-espCorner.CornerRadius = UDim.new(0, 8)
-espCorner.Parent = ESPToggle
+local ESPColorButton = Instance.new("TextButton")
+ESPColorButton.Name = "ESPColorButton"
+ESPColorButton.Size = UDim2.new(0, 80, 0, 30)
+ESPColorButton.Position = UDim2.new(0, 100, 0, 40)
+ESPColorButton.BackgroundColor3 = ESPColor
+ESPColorButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ESPColorButton.Text = ArabicText.Color
+ESPColorButton.Font = Enum.Font.GothamBold
+ESPColorButton.TextSize = 14
+ESPColorButton.BorderSizePixel = 0
+ESPColorButton.Parent = ESPFrame
 
--- ESP Status
-local ESPStatus = Instance.new("TextLabel")
-ESPStatus.Name = "ESPStatus"
-ESPStatus.Parent = Content
-ESPStatus.BackgroundTransparency = 1
-ESPStatus.Position = UDim2.new(0.1, 0, 0.3, 0)
-ESPStatus.Size = UDim2.new(0.8, 0, 0, 30)
-ESPStatus.Font = Enum.Font.GothamBold
-ESPStatus.Text = "الحالة: غير مفعل"
-ESPStatus.TextColor3 = Color3.fromRGB(255, 80, 80)
-ESPStatus.TextSize = 16
+-- قسم Hitbox
+local HitboxFrame = Instance.new("Frame")
+HitboxFrame.Name = "HitboxFrame"
+HitboxFrame.Size = UDim2.new(1, 0, 0, 150)
+HitboxFrame.Position = UDim2.new(0, 0, 0, 110)
+HitboxFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+HitboxFrame.BorderSizePixel = 0
+HitboxFrame.Parent = ContentFrame
 
--- ESP Color Button
-local ESPColor = Instance.new("TextButton")
-ESPColor.Name = "ESPColor"
-ESPColor.Parent = Content
-ESPColor.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-ESPColor.BorderSizePixel = 0
-ESPColor.Position = UDim2.new(0.1, 0, 0.45, 0)
-ESPColor.Size = UDim2.new(0.8, 0, 0, 50)
-ESPColor.Font = Enum.Font.Gotham
-ESPColor.Text = "تغيير لون ESP"
-ESPColor.TextColor3 = Color3.fromRGB(255, 255, 255)
-ESPColor.TextSize = 14
-ESPColor.TextWrapped = true
+local HitboxTitle = Instance.new("TextLabel")
+HitboxTitle.Name = "HitboxTitle"
+HitboxTitle.Size = UDim2.new(1, 0, 0, 30)
+HitboxTitle.Position = UDim2.new(0, 0, 0, 0)
+HitboxTitle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+HitboxTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+HitboxTitle.Text = ArabicText.Hitbox
+HitboxTitle.Font = Enum.Font.GothamBold
+HitboxTitle.TextSize = 16
+HitboxTitle.BorderSizePixel = 0
+HitboxTitle.Parent = HitboxFrame
 
-local espColorCorner = Instance.new("UICorner")
-espColorCorner.CornerRadius = UDim.new(0, 8)
-espColorCorner.Parent = ESPColor
-
--- Hitbox Toggle
 local HitboxToggle = Instance.new("TextButton")
 HitboxToggle.Name = "HitboxToggle"
-HitboxToggle.Parent = Content
-HitboxToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-HitboxToggle.BorderSizePixel = 0
-HitboxToggle.Position = UDim2.new(0.1, 0, 0.65, 0)
-HitboxToggle.Size = UDim2.new(0.8, 0, 0, 50)
-HitboxToggle.Font = Enum.Font.Gotham
-HitboxToggle.Text = "تفعيل توسيع الهيت بوكس"
+HitboxToggle.Size = UDim2.new(0, 80, 0, 30)
+HitboxToggle.Position = UDim2.new(0, 10, 0, 40)
+HitboxToggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
 HitboxToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+HitboxToggle.Text = ArabicText.Off
+HitboxToggle.Font = Enum.Font.GothamBold
 HitboxToggle.TextSize = 14
-HitboxToggle.TextWrapped = true
+HitboxToggle.BorderSizePixel = 0
+HitboxToggle.Parent = HitboxFrame
 
-local hitboxCorner = Instance.new("UICorner")
-hitboxCorner.CornerRadius = UDim.new(0, 8)
-hitboxCorner.Parent = HitboxToggle
+-- أزرار تغيير ألوان Hitbox
+local ColorButtonsFrame = Instance.new("Frame")
+ColorButtonsFrame.Name = "ColorButtonsFrame"
+ColorButtonsFrame.Size = UDim2.new(1, -20, 0, 60)
+ColorButtonsFrame.Position = UDim2.new(0, 10, 0, 80)
+ColorButtonsFrame.BackgroundTransparency = 1
+ColorButtonsFrame.Parent = HitboxFrame
 
--- Hitbox Status
-local HitboxStatus = Instance.new("TextLabel")
-HitboxStatus.Name = "HitboxStatus"
-HitboxStatus.Parent = Content
-HitboxStatus.BackgroundTransparency = 1
-HitboxStatus.Position = UDim2.new(0.1, 0, 0.85, 0)
-HitboxStatus.Size = UDim2.new(0.8, 0, 0, 30)
-HitboxStatus.Font = Enum.Font.GothamBold
-HitboxStatus.Text = "الحالة: غير مفعل"
-HitboxStatus.TextColor3 = Color3.fromRGB(255, 80, 80)
-HitboxStatus.TextSize = 16
+local colors = {
+    {Name = ArabicText.Red, Color = Color3.fromRGB(255, 0, 0)},
+    {Name = ArabicText.Green, Color = Color3.fromRGB(0, 255, 0)},
+    {Name = ArabicText.Blue, Color = Color3.fromRGB(0, 0, 255)},
+    {Name = ArabicText.Yellow, Color = Color3.fromRGB(255, 255, 0)},
+    {Name = ArabicText.Purple, Color = Color3.fromRGB(255, 0, 255)}
+}
 
--- Make draggable
-local dragging = false
-local dragStart, startPos
-
-TopBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
-    end
-end)
-
--- Toggle GUI Function
-local function toggleGUI(show)
-    guiVisible = show
-    
-    if show then
-        MainFrame.Visible = true
-        MainFrame.Size = UDim2.new(0, 10, 0, 10)
-        MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-        
-        -- Open animation
-        local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3), {
-            Size = UDim2.new(0, 300, 0, 350)
-        })
-        tween:Play()
-        
-        -- Change button color
-        OpenButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-    else
-        -- Close animation
-        local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3), {
-            Size = UDim2.new(0, 10, 0, 10)
-        })
-        tween:Play()
-        
-        -- Reset button color
-        OpenButton.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
-        
-        wait(0.3)
-        MainFrame.Visible = false
-    end
+for i, colorInfo in ipairs(colors) do
+    local ColorButton = Instance.new("TextButton")
+    ColorButton.Name = colorInfo.Name
+    ColorButton.Size = UDim2.new(0.45, 0, 0, 25)
+    ColorButton.Position = UDim2.new((i-1)%2 * 0.5, 5, math.floor((i-1)/2) * 0.5, 5)
+    ColorButton.BackgroundColor3 = colorInfo.Color
+    ColorButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ColorButton.Text = colorInfo.Name
+    ColorButton.Font = Enum.Font.Gotham
+    ColorButton.TextSize = 12
+    ColorButton.BorderSizePixel = 0
+    ColorButton.Parent = ColorButtonsFrame
 end
 
--- Button Events
-OpenButton.MouseButton1Click:Connect(function()
-    toggleGUI(not guiVisible)
-end)
+-- إضافة الصورة (يمكنك استبدال الرابط بصورة الخاصة بك)
+local Logo = Instance.new("ImageLabel")
+Logo.Name = "Logo"
+Logo.Size = UDim2.new(0, 60, 0, 60)
+Logo.Position = UDim2.new(0.8, 0, 0, -70)
+Logo.BackgroundTransparency = 1
+Logo.Image = "rbxassetid://1234567890" -- ضع رابط الصورة هنا
+Logo.Parent = MainFrame
 
-CloseButton.MouseButton1Click:Connect(function()
-    toggleGUI(false)
-end)
+-- وضع الواجهة على الشاشة
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
--- ESP Variables
-local espObjects = {}
-local espColor = Color3.fromRGB(255, 0, 0)
-
--- ESP Functions
-local function createESP(character)
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "MZESP"
-    highlight.Adornee = character
-    highlight.FillColor = espColor
-    highlight.FillTransparency = 0.5
-    highlight.OutlineColor = espColor
-    highlight.OutlineTransparency = 0
-    highlight.Parent = character
-    
-    espObjects[character] = highlight
+-- وظائف التحكم
+local function ToggleGUI()
+    MainFrame.Visible = not MainFrame.Visible
 end
 
-local function removeESP(character)
-    if espObjects[character] then
-        espObjects[character]:Destroy()
-        espObjects[character] = nil
-    end
-end
-
-local function toggleESP(state)
-    espEnabled = state
-    ESPStatus.Text = state and "الحالة: مفعل" or "الحالة: غير مفعل"
-    ESPStatus.TextColor3 = state and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
-    
-    if state then
-        -- Enable ESP
-        for _, otherPlayer in ipairs(Players:GetPlayers()) do
-            if otherPlayer ~= player and otherPlayer.Character then
-                createESP(otherPlayer.Character)
-            end
+local function UpdateESP()
+    for _, esp in pairs(ESPInstances) do
+        if esp then
+            esp:Remove()
         end
-        ESPToggle.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
-    else
-        -- Disable ESP
-        for character, _ in pairs(espObjects) do
-            removeESP(character)
-        end
-        ESPToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
     end
-end
-
--- Hitbox Variables
-local hitboxHighlights = {}
-local originalSizes = {}
-local hitboxColor = Color3.fromRGB(0, 255, 0)
-local hitboxSize = 3
-
--- Hitbox Functions
-local function applyHitboxExpander(character)
-    if not character then return end
+    ESPInstances = {}
     
-    hitboxHighlights[character] = {}
-    originalSizes[character] = {}
+    if not ESPEnabled then return end
     
-    for _, part in ipairs(character:GetChildren()) do
-        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-            -- Store original size
-            originalSizes[character][part] = part.Size
+    for _, otherPlayer in pairs(Players:GetPlayers()) do
+        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local character = otherPlayer.Character
+            local humanoidRootPart = character.HumanoidRootPart
             
-            -- Expand size
-            part.Size = part.Size * hitboxSize
+            -- Highlight ESP
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "MZESP"
+            highlight.Adornee = character
+            highlight.FillColor = ESPColor
+            highlight.OutlineColor = ESPColor
+            highlight.FillTransparency = 0.3
+            highlight.OutlineTransparency = 0
+            highlight.Parent = character
             
-            -- Add visual
-            local box = Instance.new("BoxHandleAdornment")
-            box.Name = "MZHitbox"
-            box.Adornee = part
-            box.AlwaysOnTop = true
-            box.Size = part.Size
-            box.Color3 = hitboxColor
-            box.Transparency = 0.3
-            box.Parent = part
+            -- Track Line
+            local beam = Instance.new("Beam")
+            beam.Name = "MZTrackLine"
+            beam.Color = ColorSequence.new(ESPColor)
+            beam.Width0 = 0.2
+            beam.Width1 = 0.2
             
-            table.insert(hitboxHighlights[character], box)
+            local attachment0 = Instance.new("Attachment")
+            attachment0.Name = "MZAttachment0"
+            attachment0.Parent = humanoidRootPart
+            
+            local attachment1 = Instance.new("Attachment")
+            attachment1.Name = "MZAttachment1"
+            attachment1.Parent = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            
+            beam.Attachment0 = attachment0
+            beam.Attachment1 = attachment1
+            beam.Parent = workspace
+            
+            table.insert(ESPInstances, highlight)
+            table.insert(ESPInstances, beam)
+            table.insert(ESPInstances, attachment0)
+            table.insert(ESPInstances, attachment1)
         end
     end
 end
 
-local function removeHitboxExpander(character)
-    if hitboxHighlights[character] then
-        -- Remove visuals
-        for _, box in ipairs(hitboxHighlights[character]) do
-            box:Destroy()
+local function UpdateHitbox()
+    for _, hitbox in pairs(HitboxInstances) do
+        if hitbox then
+            hitbox:Remove()
         end
-        
-        -- Restore sizes
-        if originalSizes[character] then
-            for part, size in pairs(originalSizes[character]) do
-                if part then
-                    part.Size = size
+    end
+    HitboxInstances = {}
+    
+    if not HitboxEnabled then return end
+    
+    for _, otherPlayer in pairs(Players:GetPlayers()) do
+        if otherPlayer ~= player and otherPlayer.Character then
+            local character = otherPlayer.Character
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            
+            if humanoid then
+                -- توسيع الهيت بوكس
+                for _, part in pairs(character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.Size = part.Size * 2
+                        part.Transparency = 0.5
+                        part.BrickColor = BrickColor.new(HitboxColor)
+                        
+                        local originalSize = part.Size
+                        local originalTransparency = part.Transparency
+                        local originalColor = part.BrickColor
+                        
+                        table.insert(HitboxInstances, {
+                            Part = part,
+                            OriginalSize = originalSize,
+                            OriginalTransparency = originalTransparency,
+                            OriginalColor = originalColor
+                        })
+                    end
                 end
             end
         end
-        
-        hitboxHighlights[character] = nil
-        originalSizes[character] = nil
     end
 end
 
-local function toggleHitboxExpander(state)
-    hitboxEnabled = state
-    HitboxStatus.Text = state and "الحالة: مفعل" or "الحالة: غير مفعل"
-    HitboxStatus.TextColor3 = state and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
-    
-    if state then
-        -- Enable hitbox
-        for _, otherPlayer in ipairs(Players:GetPlayers()) do
-            if otherPlayer ~= player and otherPlayer.Character then
-                applyHitboxExpander(otherPlayer.Character)
-            end
+local function ResetHitbox()
+    for _, hitboxData in pairs(HitboxInstances) do
+        if hitboxData.Part and hitboxData.Part.Parent then
+            hitboxData.Part.Size = hitboxData.OriginalSize
+            hitboxData.Part.Transparency = hitboxData.OriginalTransparency
+            hitboxData.Part.BrickColor = hitboxData.OriginalColor
         end
-        HitboxToggle.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
-    else
-        -- Disable hitbox
-        for character, _ in pairs(hitboxHighlights) do
-            removeHitboxExpander(character)
-        end
-        HitboxToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
     end
+    HitboxInstances = {}
 end
 
--- Connect button events
+-- الأحداث
+ToggleButton.MouseButton1Click:Connect(ToggleGUI)
+
 ESPToggle.MouseButton1Click:Connect(function()
-    toggleESP(not espEnabled)
+    ESPEnabled = not ESPEnabled
+    if ESPEnabled then
+        ESPToggle.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        ESPToggle.Text = ArabicText.On
+    else
+        ESPToggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        ESPToggle.Text = ArabicText.Off
+    end
+    UpdateESP()
 end)
 
-ESPColor.MouseButton1Click:Connect(function()
-    -- Random color
-    espColor = Color3.fromRGB(math.random(50, 255), math.random(50, 255), math.random(50, 255))
-    ESPColor.BackgroundColor3 = espColor
-    
-    -- Update existing ESP
-    for _, highlight in pairs(espObjects) do
-        if highlight then
-            highlight.FillColor = espColor
-            highlight.OutlineColor = espColor
+ESPColorButton.MouseButton1Click:Connect(function()
+    local currentIndex = 1
+    for i, colorInfo in ipairs(colors) do
+        if colorInfo.Color == ESPColor then
+            currentIndex = i
+            break
         end
     end
+    
+    local nextIndex = (currentIndex % #colors) + 1
+    ESPColor = colors[nextIndex].Color
+    ESPColorButton.BackgroundColor3 = ESPColor
+    UpdateESP()
 end)
 
 HitboxToggle.MouseButton1Click:Connect(function()
-    toggleHitboxExpander(not hitboxEnabled)
+    HitboxEnabled = not HitboxEnabled
+    if HitboxEnabled then
+        HitboxToggle.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        HitboxToggle.Text = ArabicText.On
+        UpdateHitbox()
+    else
+        HitboxToggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        HitboxToggle.Text = ArabicText.Off
+        ResetHitbox()
+    end
 end)
 
--- Handle player connections
-Players.PlayerAdded:Connect(function(newPlayer)
-    newPlayer.CharacterAdded:Connect(function(character)
-        wait(1)
-        if espEnabled then
-            createESP(character)
-        end
-        if hitboxEnabled then
-            applyHitboxExpander(character)
-        end
-    end)
-end)
-
--- Initial setup for existing players
-for _, otherPlayer in ipairs(Players:GetPlayers()) do
-    if otherPlayer ~= player and otherPlayer.Character then
-        if espEnabled then
-            createESP(otherPlayer.Character)
-        end
-        if hitboxEnabled then
-            applyHitboxExpander(otherPlayer.Character)
-        end
+for _, colorInfo in ipairs(colors) do
+    local button = ColorButtonsFrame:FindFirstChild(colorInfo.Name)
+    if button then
+        button.MouseButton1Click:Connect(function()
+            HitboxColor = colorInfo.Color
+            if HitboxEnabled then
+                UpdateHitbox()
+            end
+        end)
     end
 end
 
--- Mobile optimization
-if UserInputService.TouchEnabled then
-    OpenButton.Size = UDim2.new(0, 80, 0, 80)
-    OpenButton.TextSize = 22
-    ESPToggle.Size = UDim2.new(0.8, 0, 0, 60)
-    ESPColor.Size = UDim2.new(0.8, 0, 0, 60)
-    HitboxToggle.Size = UDim2.new(0.8, 0, 0, 60)
+-- تحديث ESP باستمرار
+RunService.RenderStepped:Connect(function()
+    if ESPEnabled then
+        UpdateESP()
+    end
+end)
+
+-- إعادة التعيين عند الموت
+player.CharacterAdded:Connect(function(character)
+    character:WaitForChild("Humanoid").Died:Connect(function()
+        -- الاستمرار في العمل حتى بعد الموت
+        wait(1)
+    end)
+end)
+
+-- جعل الواجهة مناسبة للهاتف
+local function SetupMobileControls()
+    local touchStartPos
+    local frameStartPos
+    
+    MainFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            touchStartPos = input.Position
+            frameStartPos = MainFrame.Position
+        end
+    end)
+    
+    MainFrame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch and touchStartPos then
+            local delta = input.Position - touchStartPos
+            MainFrame.Position = UDim2.new(
+                frameStartPos.X.Scale,
+                frameStartPos.X.Offset + delta.X,
+                frameStartPos.Y.Scale,
+                frameStartPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+    
+    MainFrame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            touchStartPos = nil
+            frameStartPos = nil
+        end
+    end)
 end
 
-print("✅ MZ Hub Loaded Successfully!")
-print("🎮 Created by Unknown Boi")
-print("🔵 Look for the blue MZ button on your screen!")
-print("📱 Mobile Optimized")
-print("🎯 Features: ESP & Hitbox Expander")
+SetupMobileControls()
+
+print("MZ Hub loaded successfully! - By Unknown Boi")
+print("تم تحميل MZ Hub بنجاح! - صنع بواسطة Unknown Boi")
