@@ -24,7 +24,7 @@ local Camera = workspace.CurrentCamera
 local ESPEnabled = true
 local HitboxEnabled = false
 local UIVisible = false
-local HitboxSize = 1.8  -- الحجم الافتراضي
+local HitboxSizeMultiplier = 1.8  -- الحجم الافتراضي
 
 -- ألوان
 local ESPColor = Color3.fromRGB(0, 255, 255)
@@ -32,7 +32,7 @@ local HitboxColor = Color3.fromRGB(255, 50, 50)
 
 -- كائنات الرؤية والهيت بوكس
 local ESPObjects = {}
-local HitboxObjects = {}
+local HitboxConnections = {}
 
 -- قائمة الألوان
 local ColorOptions = {
@@ -44,6 +44,102 @@ local ColorOptions = {
     {Name = "وردي", Color = Color3.fromRGB(255, 105, 180)},
     {Name = "برتقالي", Color = Color3.fromRGB(255, 165, 0)}
 }
+
+-- =============================================
+-- وظائف توسيع الهيت بوكس (النظام الجديد)
+-- =============================================
+getgenv().HBE = false -- HBE Variable, use this to control whether the hitboxes are active or not.
+
+local function GetCharParent()
+    local charParent
+    repeat wait() until player.Character
+    for _, char in pairs(workspace:GetDescendants()) do
+        if string.find(char.Name, player.Name) and char:FindFirstChild("Humanoid") then
+            charParent = char.Parent
+            break
+        end
+    end
+    return charParent
+end
+
+-- pcall to avoid the script breaking on low level executors
+pcall(function()
+    local mt = getrawmetatable(game)
+    setreadonly(mt, false)
+    local old = mt.__index
+    mt.__index = function(Self, Key)
+        if tostring(Self) == "HumanoidRootPart" and tostring(Key) == "Size" then
+            return Vector3.new(2,2,1)
+        end
+        return old(Self, Key)
+    end
+    setreadonly(mt, true)
+end)
+
+local CHAR_PARENT = GetCharParent()
+local HITBOX_BASE_SIZE = 15 -- الحجم الأساسي
+local HITBOX_SIZE = Vector3.new(HITBOX_BASE_SIZE, HITBOX_BASE_SIZE, HITBOX_BASE_SIZE)
+
+local function UpdateHitboxSize()
+    local sizeValue = HITBOX_BASE_SIZE * HitboxSizeMultiplier
+    HITBOX_SIZE = Vector3.new(sizeValue, sizeValue, sizeValue)
+end
+
+local function AssignHitboxes(targetPlayer)
+    if targetPlayer == player then return end
+
+    local hitbox_connection
+    hitbox_connection = RunService.RenderStepped:Connect(function()
+        local char = CHAR_PARENT:FindFirstChild(targetPlayer.Name)
+        if getgenv().HBE then
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                -- تحديث الحجم بناءً على المضاعف
+                UpdateHitboxSize()
+                
+                if char.HumanoidRootPart.Size ~= HITBOX_SIZE or char.HumanoidRootPart.Color ~= HitboxColor then
+                    char.HumanoidRootPart.Size = HITBOX_SIZE
+                    char.HumanoidRootPart.Color = HitboxColor
+                    char.HumanoidRootPart.CanCollide = false
+                    char.HumanoidRootPart.Transparency = 0.5
+                    char.HumanoidRootPart.Material = Enum.Material.Neon
+                end
+            end
+        else
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                char.HumanoidRootPart.Size = Vector3.new(2,2,1)
+                char.HumanoidRootPart.Transparency = 1
+            end
+        end
+    end)
+    
+    HitboxConnections[targetPlayer] = hitbox_connection
+end
+
+local function InitializeHitboxes()
+    getgenv().HBE = HitboxEnabled
+    
+    -- تنظيف الاتصالات القديمة
+    for _, connection in pairs(HitboxConnections) do
+        connection:Disconnect()
+    end
+    HitboxConnections = {}
+    
+    if HitboxEnabled then
+        for _, otherPlayer in ipairs(Players:GetPlayers()) do
+            if otherPlayer ~= player then
+                AssignHitboxes(otherPlayer)
+            end
+        end
+    else
+        -- إعادة تعيين الهيت بوكس لجميع اللاعبين
+        for _, otherPlayer in ipairs(Players:GetPlayers()) do
+            if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                otherPlayer.Character.HumanoidRootPart.Size = Vector3.new(2,2,1)
+                otherPlayer.Character.HumanoidRootPart.Transparency = 1
+            end
+        end
+    end
+end
 
 -- =============================================
 -- وظائف الرؤية عبر الجدران (Highlights)
@@ -118,100 +214,6 @@ local function UpdateHighlightESP()
 end
 
 -- =============================================
--- وظائف توسيع الهيت بوكس
--- =============================================
-local function ExpandHitbox(character)
-    if not character then return end
-    
-    local hitboxData = {}
-    
-    for _, part in pairs(character:GetChildren()) do
-        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-            -- حفظ البيانات الأصلية
-            local originalSize = part.Size
-            local originalTransparency = part.Transparency
-            local originalColor = part.BrickColor
-            local originalMaterial = part.Material
-            
-            -- توسيع الهيت بوكس بالحجم المحدد
-            part.Size = part.Size * HitboxSize
-            part.Transparency = 0.3
-            part.BrickColor = BrickColor.new(HitboxColor)
-            part.Material = Enum.Material.Neon
-            
-            hitboxData[part] = {
-                OriginalSize = originalSize,
-                OriginalTransparency = originalTransparency,
-                OriginalColor = originalColor,
-                OriginalMaterial = originalMaterial
-            }
-        end
-    end
-    
-    HitboxObjects[character] = hitboxData
-end
-
-local function ResetHitbox(character)
-    if not character then return end
-    
-    local hitboxData = HitboxObjects[character]
-    if hitboxData then
-        for part, originalData in pairs(hitboxData) do
-            if part and part.Parent then
-                part.Size = originalData.OriginalSize
-                part.Transparency = originalData.OriginalTransparency
-                part.BrickColor = originalData.OriginalColor
-                part.Material = originalData.OriginalMaterial
-            end
-        end
-        HitboxObjects[character] = nil
-    end
-end
-
-local function UpdateHitboxes()
-    -- إعادة تعيين الهيت بوكس إذا تم إيقاف التشغيل
-    if not HitboxEnabled then
-        for character, _ in pairs(HitboxObjects) do
-            ResetHitbox(character)
-        end
-        return
-    end
-    
-    -- تحديث الهيت بوكس
-    for _, otherPlayer in pairs(Players:GetPlayers()) do
-        if otherPlayer ~= player and otherPlayer.Character then
-            local humanoid = otherPlayer.Character:FindFirstChild("Humanoid")
-            local humanoidRootPart = otherPlayer.Character:FindFirstChild("HumanoidRootPart")
-            
-            if humanoid and humanoid.Health > 0 and humanoidRootPart then
-                local distance = (Camera.CFrame.Position - humanoidRootPart.Position).Magnitude
-                
-                if distance <= Config.MaxDistance then
-                    -- توسيع الهيت بوكس
-                    if not HitboxObjects[otherPlayer.Character] then
-                        ExpandHitbox(otherPlayer.Character)
-                    else
-                        -- تحديث اللون والحجم إذا تغير
-                        for part, _ in pairs(HitboxObjects[otherPlayer.Character]) do
-                            if part and part.Parent then
-                                part.BrickColor = BrickColor.new(HitboxColor)
-                                -- إعادة تطبيق الحجم الجديد
-                                local originalSize = HitboxObjects[otherPlayer.Character][part].OriginalSize
-                                part.Size = originalSize * HitboxSize
-                            end
-                        end
-                    end
-                else
-                    ResetHitbox(otherPlayer.Character)
-                end
-            else
-                ResetHitbox(otherPlayer.Character)
-            end
-        end
-    end
-end
-
--- =============================================
 -- وظائف تغيير الألوان
 -- =============================================
 local function ChangeESPColor()
@@ -245,7 +247,9 @@ local function ChangeHitboxColor()
     HitboxColor = ColorOptions[nextIndex].Color
     
     -- تحديث الهيت بوكس باللون الجديد
-    UpdateHitboxes()
+    if HitboxEnabled then
+        InitializeHitboxes()
+    end
     
     return ColorOptions[nextIndex].Name
 end
@@ -269,7 +273,7 @@ local function createModernUI()
     OpenCloseButton.Size = UDim2.new(0, 70, 0, 70)
     OpenCloseButton.Position = UDim2.new(0, 25, 0.5, -35)
     OpenCloseButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-    OpenCloseButton.Image = "rbxassetid://10734996320"
+    OpenCloseButton.Image = "http://www.roblox.com/asset/?id=118614421027521" -- الصورة المخصصة
     OpenCloseButton.ScaleType = Enum.ScaleType.Fit
     OpenCloseButton.Parent = ControlGui
 
@@ -375,7 +379,7 @@ local function createModernUI()
     CloseButton.Size = UDim2.new(0, 30, 0, 30)
     CloseButton.Position = UDim2.new(0.9, 0, 0.5, -15)
     CloseButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-    CloseButton.Image = "rbxassetid://111386856155150"
+    CloseButton.Image = "http://www.roblox.com/asset/?id=118614421027521"
     CloseButton.Parent = Header
 
     local closeCorner = Instance.new("UICorner")
@@ -526,7 +530,7 @@ local function createModernUI()
 
     -- الشريط الأمامي
     local SliderFill = Instance.new("Frame")
-    SliderFill.Size = UDim2.new((HitboxSize - 1) / 2, 0, 1, 0)  -- من 1x إلى 3x
+    SliderFill.Size = UDim2.new((HitboxSizeMultiplier - 1) / 2, 0, 1, 0)  -- من 1x إلى 3x
     SliderFill.Position = UDim2.new(0, 0, 0, 0)
     SliderFill.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
     SliderFill.BorderSizePixel = 0
@@ -539,7 +543,7 @@ local function createModernUI()
     -- نقطة التحكم
     local SliderThumb = Instance.new("TextButton")
     SliderThumb.Size = UDim2.new(0, 20, 0, 20)
-    SliderThumb.Position = UDim2.new((HitboxSize - 1) / 2, -10, 0, -7)
+    SliderThumb.Position = UDim2.new((HitboxSizeMultiplier - 1) / 2, -10, 0, -7)
     SliderThumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     SliderThumb.Text = ""
     SliderThumb.Parent = SliderBackground
@@ -620,16 +624,16 @@ local function createModernUI()
     -- وظيفة تحديث الشريط
     local function updateSlider(value)
         -- تحديد القيمة بين 1 و 3
-        HitboxSize = math.clamp(value, 1.0, 3.0)
+        HitboxSizeMultiplier = math.clamp(value, 1.0, 3.0)
         
         -- تحديث واجهة المستخدم
-        SizeLabel.Text = string.format("حجم الهيت بوكس: %.1fx", HitboxSize)
-        SliderFill.Size = UDim2.new((HitboxSize - 1) / 2, 0, 1, 0)
-        SliderThumb.Position = UDim2.new((HitboxSize - 1) / 2, -10, 0, -7)
+        SizeLabel.Text = string.format("حجم الهيت بوكس: %.1fx", HitboxSizeMultiplier)
+        SliderFill.Size = UDim2.new((HitboxSizeMultiplier - 1) / 2, 0, 1, 0)
+        SliderThumb.Position = UDim2.new((HitboxSizeMultiplier - 1) / 2, -10, 0, -7)
         
         -- تحديث الهيت بوكس إذا كان مفعلاً
         if HitboxEnabled then
-            UpdateHitboxes()
+            InitializeHitboxes()
         end
     end
 
@@ -735,7 +739,7 @@ local function createModernUI()
         HitboxToggle.BackgroundColor3 = HitboxEnabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(255, 60, 60)
         
         createRippleEffect(HitboxToggle)
-        UpdateHitboxes()
+        InitializeHitboxes()
     end)
 
     HitboxColorButton.MouseButton1Click:Connect(function()
@@ -820,12 +824,20 @@ local function initializeSystem()
     -- الحلقة الرئيسية للتحديث
     RunService.RenderStepped:Connect(function()
         UpdateHighlightESP()
-        UpdateHitboxes()
+    end)
+
+    -- إضافة لاعبين جدد
+    Players.PlayerAdded:Connect(function(newPlayer)
+        if getgenv().HBE then
+            AssignHitboxes(newPlayer)
+        end
     end)
 
     -- التأكد من استمرار العمل بعد الموت
     player.CharacterAdded:Connect(function(character)
         print("🔄 MZ Hub: إعادة ولادة - النظام يعمل!")
+        -- تحديث CHAR_PARENT عند إعادة الولادة
+        CHAR_PARENT = GetCharParent()
     end)
 
     -- التنظيف عند المغادرة
@@ -838,9 +850,9 @@ local function initializeSystem()
                     highlight:Destroy()
                 end
             end
-            -- تنظيف الهيت بوكس
-            for character, _ in pairs(HitboxObjects) do
-                ResetHitbox(character)
+            -- تنظيف اتصالات الهيت بوكس
+            for _, connection in pairs(HitboxConnections) do
+                connection:Disconnect()
             end
         end
     end)
@@ -848,8 +860,9 @@ local function initializeSystem()
     print("🎉 MZ Hub v2.0 - تم التحميل بنجاح!")
     print("✨ واجهة حديثة - تصميم احترافي")
     print("👁️ نظام الرؤية - يعمل بكفاءة")
-    print("🎯 نظام الهيت بوكس - مع شريط تحكم الحجم")
+    print("🎯 نظام الهيت بوكس المتقدم - مع شريط تحكم الحجم")
     print("📊 حجم الهيت بوكس: من 1x إلى 3x")
+    print("🖼️ زر مخصص - بصورة ID: 118614421027521")
     print("🎨 ألوان متعددة - تخصيص كامل")
     print("📱 مناسب للهاتف - تحكم سلس")
     print("💎 صنع بواسطة unknown boi")
