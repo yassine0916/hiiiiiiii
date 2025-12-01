@@ -6,13 +6,13 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
-local HttpService = game:GetService("HttpService")
 
 -- إعدادات الرؤية عبر الجدران
 local Config = {
     BoxESP = true,
     NameESP = true,
     DistanceESP = true,
+    SkeletonESP = false,
     TeamCheck = true,
     MaxDistance = 1000
 }
@@ -29,6 +29,7 @@ local HitboxSizeMultiplier = 1.8
 local AimbotEnabled = false
 local InfiniteJumpEnabled = false
 local FlyEnabled = false
+local HitboxTarget = "Head" -- الرأس أو الجذع
 
 -- إعدادات الأيم بوت
 local FOVRadius = 100
@@ -229,17 +230,18 @@ local function ShowWelcomeNotification()
 end
 
 -- =============================================
--- نظام الأيم بوت الفوري
+-- نظام الأيم بوت الفوري مع دائرة FOV في المنتصف
 -- =============================================
 local function CreateFOVCircle()
     local FOVGui = Instance.new("ScreenGui")
     FOVGui.Name = "FOVCircle"
     FOVGui.Parent = CoreGui
     FOVGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    FOVGui.DisplayOrder = 999
 
     local Frame = Instance.new("Frame")
     Frame.Size = UDim2.new(0, FOVRadius * 2, 0, FOVRadius * 2)
-    Frame.Position = UDim2.new(0.5, -FOVRadius, 0.5, -FOVRadius)
+    Frame.Position = UDim2.new(0.5, -FOVRadius, 0.5, -FOVRadius) -- في المنتصف تماماً
     Frame.BackgroundTransparency = 1
     Frame.BorderSizePixel = 0
     Frame.Parent = FOVGui
@@ -251,7 +253,7 @@ local function CreateFOVCircle()
     local Outline = Instance.new("UIStroke")
     Outline.Color = FOVColor
     Outline.Thickness = 2
-    Outline.Transparency = 0
+    Outline.Transparency = 0.7
     Outline.Parent = Frame
 
     FOVCircle = {
@@ -264,14 +266,7 @@ end
 local function UpdateFOVCircle()
     if not FOVCircle then return end
     
-    local Viewport = Camera.ViewportSize
-    if Viewport.X == 0 or Viewport.Y == 0 then return end
-    
-    local CenterX = Viewport.X / 2
-    local CenterY = Viewport.Y / 2
-    
-    FOVCircle.Frame.Size = UDim2.new(0, FOVRadius * 2, 0, FOVRadius * 2)
-    FOVCircle.Frame.Position = UDim2.new(0, CenterX - FOVRadius, 0, CenterY - FOVRadius)
+    -- تحديث اللون فقط، الموضع ثابت في المنتصف
     FOVCircle.Outline.Color = FOVColor
     
     if FOVCircleVisible and AimbotEnabled then
@@ -313,18 +308,18 @@ local function FindBestTarget()
     for _, otherPlayer in pairs(Players:GetPlayers()) do
         if otherPlayer ~= player and otherPlayer.Character then
             local humanoid = otherPlayer.Character:FindFirstChild("Humanoid")
-            local head = otherPlayer.Character:FindFirstChild("Head")
+            local targetPart = otherPlayer.Character:FindFirstChild(HitboxTarget == "Head" and "Head" or "HumanoidRootPart")
             
-            if humanoid and humanoid.Health > 0 and head then
-                local screenPoint, visible = Camera:WorldToScreenPoint(head.Position)
+            if humanoid and humanoid.Health > 0 and targetPart then
+                local screenPoint, visible = Camera:WorldToScreenPoint(targetPart.Position)
                 
                 if visible then
                     local screenPos = Vector2.new(screenPoint.X, screenPoint.Y)
                     local distance = (screenPos - screenCenter).Magnitude
                     
                     if distance <= FOVRadius and distance < closestDistance then
-                        if IsTargetVisible(head) then
-                            bestTarget = head
+                        if IsTargetVisible(targetPart) then
+                            bestTarget = targetPart
                             closestDistance = distance
                         end
                     end
@@ -336,10 +331,10 @@ local function FindBestTarget()
     return bestTarget
 end
 
-local function InstantHeadLock(targetHead)
-    if not targetHead or not Camera then return end
-    local headPosition = targetHead.Position
-    Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, headPosition)
+local function InstantHeadLock(targetPart)
+    if not targetPart or not Camera then return end
+    local targetPosition = targetPart.Position
+    Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, targetPosition)
 end
 
 -- =============================================
@@ -430,7 +425,7 @@ local function EnableFly()
 end
 
 -- =============================================
--- وظائف توسيع الهيت بوكس
+-- وظائف توسيع الهيت بوكس المحسنة
 -- =============================================
 getgenv().HBE = false
 
@@ -475,21 +470,34 @@ local function AssignHitboxes(targetPlayer)
     hitbox_connection = RunService.RenderStepped:Connect(function()
         local char = CHAR_PARENT:FindFirstChild(targetPlayer.Name)
         if getgenv().HBE then
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                UpdateHitboxSize()
+            if char then
+                local targetPart = char:FindFirstChild(HitboxTarget == "Head" and "Head" or "HumanoidRootPart")
                 
-                if char.HumanoidRootPart.Size ~= HITBOX_SIZE or char.HumanoidRootPart.Color ~= HitboxColor then
-                    char.HumanoidRootPart.Size = HITBOX_SIZE
-                    char.HumanoidRootPart.Color = HitboxColor
-                    char.HumanoidRootPart.CanCollide = false
-                    char.HumanoidRootPart.Transparency = 0.5
-                    char.HumanoidRootPart.Material = Enum.Material.Neon
+                if targetPart then
+                    UpdateHitboxSize()
+                    
+                    if targetPart.Size ~= HITBOX_SIZE or targetPart.Color ~= HitboxColor then
+                        targetPart.Size = HITBOX_SIZE
+                        targetPart.Color = HitboxColor
+                        targetPart.CanCollide = false
+                        targetPart.Transparency = 0.5
+                        targetPart.Material = Enum.Material.Neon
+                    end
                 end
             end
         else
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                char.HumanoidRootPart.Size = Vector3.new(2,2,1)
-                char.HumanoidRootPart.Transparency = 1
+            if char then
+                local head = char:FindFirstChild("Head")
+                local root = char:FindFirstChild("HumanoidRootPart")
+                
+                if head then
+                    head.Size = Vector3.new(1, 1, 1)
+                    head.Transparency = 1
+                end
+                if root then
+                    root.Size = Vector3.new(2, 2, 1)
+                    root.Transparency = 1
+                end
             end
         end
     end)
@@ -513,16 +521,25 @@ local function InitializeHitboxes()
         end
     else
         for _, otherPlayer in ipairs(Players:GetPlayers()) do
-            if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                otherPlayer.Character.HumanoidRootPart.Size = Vector3.new(2,2,1)
-                otherPlayer.Character.HumanoidRootPart.Transparency = 1
+            if otherPlayer ~= player and otherPlayer.Character then
+                local head = otherPlayer.Character:FindFirstChild("Head")
+                local root = otherPlayer.Character:FindFirstChild("HumanoidRootPart")
+                
+                if head then
+                    head.Size = Vector3.new(1, 1, 1)
+                    head.Transparency = 1
+                end
+                if root then
+                    root.Size = Vector3.new(2, 2, 1)
+                    root.Transparency = 1
+                end
             end
         end
     end
 end
 
 -- =============================================
--- وظائف الرؤية عبر الجدران القوية
+-- وظائف الرؤية عبر الجدران المتقدمة
 -- =============================================
 local function CreateDrawing(type, properties)
     local drawing = Drawing.new(type)
@@ -555,14 +572,9 @@ local function CreateESP(player)
             Color = ESPColor,
             Visible = false
         }),
-        HealthBar = CreateDrawing("Line", {
-            Thickness = 3,
-            Color = Color3.fromRGB(0, 255, 0),
-            Visible = false
-        }),
-        HealthBarBackground = CreateDrawing("Line", {
-            Thickness = 3,
-            Color = Color3.fromRGB(255, 0, 0),
+        Skeleton = CreateDrawing("Line", {
+            Thickness = 2,
+            Color = ESPColor,
             Visible = false
         })
     }
@@ -608,14 +620,68 @@ local function GetDistance(playerCharacter)
     return math.floor((playerCharacter.HumanoidRootPart.Position - Camera.CFrame.Position).Magnitude)
 end
 
+local function DrawSkeleton(playerCharacter, esp)
+    if not playerCharacter or not Config.SkeletonESP then return end
+    
+    local points = {
+        "Head", "UpperTorso", "LowerTorso",
+        "LeftUpperArm", "LeftLowerArm", "LeftHand",
+        "RightUpperArm", "RightLowerArm", "RightHand",
+        "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
+        "RightUpperLeg", "RightLowerLeg", "RightFoot"
+    }
+    
+    local connections = {
+        {"Head", "UpperTorso"},
+        {"UpperTorso", "LowerTorso"},
+        {"UpperTorso", "LeftUpperArm"},
+        {"LeftUpperArm", "LeftLowerArm"},
+        {"LeftLowerArm", "LeftHand"},
+        {"UpperTorso", "RightUpperArm"},
+        {"RightUpperArm", "RightLowerArm"},
+        {"RightLowerArm", "RightHand"},
+        {"LowerTorso", "LeftUpperLeg"},
+        {"LeftUpperLeg", "LeftLowerLeg"},
+        {"LeftLowerLeg", "LeftFoot"},
+        {"LowerTorso", "RightUpperLeg"},
+        {"RightUpperLeg", "RightLowerLeg"},
+        {"RightLowerLeg", "RightFoot"}
+    }
+    
+    local screenPoints = {}
+    
+    for _, pointName in ipairs(points) do
+        local part = playerCharacter:FindFirstChild(pointName)
+        if part then
+            local screenPoint, visible = Camera:WorldToViewportPoint(part.Position)
+            if visible then
+                screenPoints[pointName] = Vector2.new(screenPoint.X, screenPoint.Y)
+            end
+        end
+    end
+    
+    esp.Skeleton.Visible = false
+    
+    for _, connection in ipairs(connections) do
+        local point1 = screenPoints[connection[1]]
+        local point2 = screenPoints[connection[2]]
+        
+        if point1 and point2 then
+            esp.Skeleton.From = point1
+            esp.Skeleton.To = point2
+            esp.Skeleton.Color = ESPColor
+            esp.Skeleton.Visible = true
+        end
+    end
+end
+
 local function UpdateESP()
     if not ESPEnabled then
         for _, esp in pairs(ESPObjects) do
             esp.Box.Visible = false
             esp.Name.Visible = false
             esp.Distance.Visible = false
-            esp.HealthBar.Visible = false
-            esp.HealthBarBackground.Visible = false
+            esp.Skeleton.Visible = false
         end
         return
     end
@@ -633,10 +699,10 @@ local function UpdateESP()
                     
                     if distance <= Config.MaxDistance then
                         local boxPosition, boxSize, valid = CalculateBox(character)
+                        local teamColor = GetTeamColor(targetPlayer)
                         
                         if valid then
-                            local teamColor = GetTeamColor(targetPlayer)
-                            
+                            -- Box ESP
                             if Config.BoxESP then
                                 esp.Box.Position = boxPosition
                                 esp.Box.Size = boxSize
@@ -646,6 +712,7 @@ local function UpdateESP()
                                 esp.Box.Visible = false
                             end
                             
+                            -- Name ESP
                             if Config.NameESP then
                                 esp.Name.Position = Vector2.new(boxPosition.X + boxSize.X / 2, boxPosition.Y - 20)
                                 esp.Name.Text = targetPlayer.Name
@@ -655,6 +722,7 @@ local function UpdateESP()
                                 esp.Name.Visible = false
                             end
                             
+                            -- Distance ESP
                             if Config.DistanceESP then
                                 esp.Distance.Position = Vector2.new(boxPosition.X + boxSize.X / 2, boxPosition.Y + boxSize.Y + 5)
                                 esp.Distance.Text = tostring(distance) .. "m"
@@ -664,44 +732,35 @@ local function UpdateESP()
                                 esp.Distance.Visible = false
                             end
                             
-                            local healthPercentage = humanoid.Health / humanoid.MaxHealth
-                            local healthBarLength = boxSize.X * healthPercentage
-                            
-                            esp.HealthBarBackground.From = Vector2.new(boxPosition.X, boxPosition.Y + boxSize.Y + 10)
-                            esp.HealthBarBackground.To = Vector2.new(boxPosition.X + boxSize.X, boxPosition.Y + boxSize.Y + 10)
-                            esp.HealthBarBackground.Visible = true
-                            
-                            esp.HealthBar.From = Vector2.new(boxPosition.X, boxPosition.Y + boxSize.Y + 10)
-                            esp.HealthBar.To = Vector2.new(boxPosition.X + healthBarLength, boxPosition.Y + boxSize.Y + 10)
-                            esp.HealthBar.Color = Color3.fromRGB(255 * (1 - healthPercentage), 255 * healthPercentage, 0)
-                            esp.HealthBar.Visible = true
+                            -- Skeleton ESP
+                            if Config.SkeletonESP then
+                                DrawSkeleton(character, esp)
+                            else
+                                esp.Skeleton.Visible = false
+                            end
                         else
                             esp.Box.Visible = false
                             esp.Name.Visible = false
                             esp.Distance.Visible = false
-                            esp.HealthBar.Visible = false
-                            esp.HealthBarBackground.Visible = false
+                            esp.Skeleton.Visible = false
                         end
                     else
                         esp.Box.Visible = false
                         esp.Name.Visible = false
                         esp.Distance.Visible = false
-                        esp.HealthBar.Visible = false
-                        esp.HealthBarBackground.Visible = false
+                        esp.Skeleton.Visible = false
                     end
                 else
                     esp.Box.Visible = false
                     esp.Name.Visible = false
                     esp.Distance.Visible = false
-                    esp.HealthBar.Visible = false
-                    esp.HealthBarBackground.Visible = false
+                    esp.Skeleton.Visible = false
                 end
             else
                 esp.Box.Visible = false
                 esp.Name.Visible = false
                 esp.Distance.Visible = false
-                esp.HealthBar.Visible = false
-                esp.HealthBarBackground.Visible = false
+                esp.Skeleton.Visible = false
             end
         end
     end
@@ -801,8 +860,8 @@ local function createModernUI()
     -- النافذة الرئيسية
     MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainPanel"
-    MainFrame.Size = UDim2.new(0, 400, 0, 550)
-    MainFrame.Position = UDim2.new(0.5, -200, 0.5, -275)
+    MainFrame.Size = UDim2.new(0, 400, 0, 600)
+    MainFrame.Position = UDim2.new(0.5, -200, 0.5, -300)
     MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
     MainFrame.BackgroundTransparency = 0.1
     MainFrame.BorderSizePixel = 0
@@ -888,25 +947,25 @@ local function createModernUI()
     TabsContainer.BackgroundTransparency = 1
     TabsContainer.Parent = MainFrame
 
-    local VisualTab = Instance.new("TextButton")
-    VisualTab.Size = UDim2.new(0.3, 0, 1, 0)
-    VisualTab.Position = UDim2.new(0, 0, 0, 0)
-    VisualTab.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    VisualTab.Text = "👁️ Visual"
-    VisualTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-    VisualTab.Font = Enum.Font.GothamBold
-    VisualTab.TextSize = 14
-    VisualTab.Parent = TabsContainer
+    local ESPTab = Instance.new("TextButton")
+    ESPTab.Size = UDim2.new(0.24, 0, 1, 0)
+    ESPTab.Position = UDim2.new(0, 0, 0, 0)
+    ESPTab.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    ESPTab.Text = "👁️ ESP"
+    ESPTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ESPTab.Font = Enum.Font.GothamBold
+    ESPTab.TextSize = 14
+    ESPTab.Parent = TabsContainer
 
     local tabCorner = Instance.new("UICorner")
     tabCorner.CornerRadius = UDim.new(0, 8)
-    tabCorner.Parent = VisualTab
+    tabCorner.Parent = ESPTab
 
     local CombatTab = Instance.new("TextButton")
-    CombatTab.Size = UDim2.new(0.3, 0, 1, 0)
-    CombatTab.Position = UDim2.new(0.35, 0, 0, 0)
+    CombatTab.Size = UDim2.new(0.24, 0, 1, 0)
+    CombatTab.Position = UDim2.new(0.25, 0, 0, 0)
     CombatTab.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    CombatTab.Text = "🎯 Combat"
+    CombatTab.Text = "🎯 قتال"
     CombatTab.TextColor3 = Color3.fromRGB(255, 255, 255)
     CombatTab.Font = Enum.Font.GothamBold
     CombatTab.TextSize = 14
@@ -914,15 +973,26 @@ local function createModernUI()
     tabCorner:Clone().Parent = CombatTab
 
     local MovementTab = Instance.new("TextButton")
-    MovementTab.Size = UDim2.new(0.3, 0, 1, 0)
-    MovementTab.Position = UDim2.new(0.7, 0, 0, 0)
+    MovementTab.Size = UDim2.new(0.24, 0, 1, 0)
+    MovementTab.Position = UDim2.new(0.5, 0, 0, 0)
     MovementTab.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    MovementTab.Text = "🏃 Movement"
+    MovementTab.Text = "🏃 حركة"
     MovementTab.TextColor3 = Color3.fromRGB(255, 255, 255)
     MovementTab.Font = Enum.Font.GothamBold
     MovementTab.TextSize = 14
     MovementTab.Parent = TabsContainer
     tabCorner:Clone().Parent = MovementTab
+
+    local VisualTab = Instance.new("TextButton")
+    VisualTab.Size = UDim2.new(0.24, 0, 1, 0)
+    VisualTab.Position = UDim2.new(0.75, 0, 0, 0)
+    VisualTab.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    VisualTab.Text = "🎨 مرئيات"
+    VisualTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+    VisualTab.Font = Enum.Font.GothamBold
+    VisualTab.TextSize = 14
+    VisualTab.Parent = TabsContainer
+    tabCorner:Clone().Parent = VisualTab
 
     -- حاوية المحتوى
     local ContentContainer = Instance.new("Frame")
@@ -931,13 +1001,13 @@ local function createModernUI()
     ContentContainer.BackgroundTransparency = 1
     ContentContainer.Parent = MainFrame
 
-    -- تبويب Visual (افتراضي)
-    local VisualContent = Instance.new("Frame")
-    VisualContent.Size = UDim2.new(1, 0, 1, 0)
-    VisualContent.Position = UDim2.new(0, 0, 0, 0)
-    VisualContent.BackgroundTransparency = 1
-    VisualContent.Visible = true
-    VisualContent.Parent = ContentContainer
+    -- تبويب ESP
+    local ESPContent = Instance.new("Frame")
+    ESPContent.Size = UDim2.new(1, 0, 1, 0)
+    ESPContent.Position = UDim2.new(0, 0, 0, 0)
+    ESPContent.BackgroundTransparency = 1
+    ESPContent.Visible = true
+    ESPContent.Parent = ContentContainer
 
     -- تبويب Combat
     local CombatContent = Instance.new("Frame")
@@ -955,69 +1025,177 @@ local function createModernUI()
     MovementContent.Visible = false
     MovementContent.Parent = ContentContainer
 
-    -- محتوى تبويب Visual
-    -- بطاقة الرؤية عبر الجدران
-    local ESPCard = Instance.new("Frame")
-    ESPCard.Size = UDim2.new(1, 0, 0, 100)
-    ESPCard.Position = UDim2.new(0, 0, 0, 0)
-    ESPCard.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-    ESPCard.BackgroundTransparency = 0.1
-    ESPCard.BorderSizePixel = 0
-    ESPCard.Parent = VisualContent
+    -- تبويب Visual
+    local VisualContent = Instance.new("Frame")
+    VisualContent.Size = UDim2.new(1, 0, 1, 0)
+    VisualContent.Position = UDim2.new(0, 0, 0, 0)
+    VisualContent.BackgroundTransparency = 1
+    VisualContent.Visible = false
+    VisualContent.Parent = ContentContainer
+
+    -- محتوى تبويب ESP
+    -- بطاقة إعدادات ESP
+    local ESPConfigCard = Instance.new("Frame")
+    ESPConfigCard.Size = UDim2.new(1, 0, 0, 200)
+    ESPConfigCard.Position = UDim2.new(0, 0, 0, 0)
+    ESPConfigCard.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    ESPConfigCard.BackgroundTransparency = 0.1
+    ESPConfigCard.BorderSizePixel = 0
+    ESPConfigCard.Parent = ESPContent
 
     local cardCorner = Instance.new("UICorner")
     cardCorner.CornerRadius = UDim.new(0, 12)
-    cardCorner.Parent = ESPCard
+    cardCorner.Parent = ESPConfigCard
 
     local cardShadow = Instance.new("UIStroke")
     cardShadow.Color = Color3.fromRGB(50, 50, 70)
     cardShadow.Thickness = 1
-    cardShadow.Parent = ESPCard
+    cardShadow.Parent = ESPConfigCard
 
     local ESPTitle = Instance.new("TextLabel")
     ESPTitle.Size = UDim2.new(1, -20, 0, 25)
     ESPTitle.Position = UDim2.new(0, 10, 0, 5)
     ESPTitle.BackgroundTransparency = 1
-    ESPTitle.Text = "👁️ الرؤية عبر الجدران"
+    ESPTitle.Text = "👁️ إعدادات الرؤية عبر الجدران"
     ESPTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
     ESPTitle.Font = Enum.Font.GothamBold
     ESPTitle.TextSize = 16
     ESPTitle.TextXAlignment = Enum.TextXAlignment.Left
-    ESPTitle.Parent = ESPCard
+    ESPTitle.Parent = ESPConfigCard
 
-    local ESPToggle = Instance.new("TextButton")
-    ESPToggle.Size = UDim2.new(0, 120, 0, 35)
-    ESPToggle.Position = UDim2.new(0, 10, 0, 35)
-    ESPToggle.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-    ESPToggle.Text = "مفعل"
-    ESPToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ESPToggle.Font = Enum.Font.GothamBold
-    ESPToggle.TextSize = 14
-    ESPToggle.Parent = ESPCard
+    local ESPMainToggle = Instance.new("TextButton")
+    ESPMainToggle.Size = UDim2.new(0, 150, 0, 35)
+    ESPMainToggle.Position = UDim2.new(0, 10, 0, 35)
+    ESPMainToggle.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+    ESPMainToggle.Text = "🔘 ESP الرئيسي: مفعل"
+    ESPMainToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ESPMainToggle.Font = Enum.Font.GothamBold
+    ESPMainToggle.TextSize = 14
+    ESPMainToggle.Parent = ESPConfigCard
 
     local toggleCorner = Instance.new("UICorner")
     toggleCorner.CornerRadius = UDim.new(0, 8)
-    toggleCorner.Parent = ESPToggle
+    toggleCorner.Parent = ESPMainToggle
+
+    local BoxToggle = Instance.new("TextButton")
+    BoxToggle.Size = UDim2.new(0, 150, 0, 35)
+    BoxToggle.Position = UDim2.new(0, 170, 0, 35)
+    BoxToggle.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+    BoxToggle.Text = "📦 مربع ESP: مفعل"
+    BoxToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    BoxToggle.Font = Enum.Font.GothamBold
+    BoxToggle.TextSize = 14
+    BoxToggle.Parent = ESPConfigCard
+    toggleCorner:Clone().Parent = BoxToggle
+
+    local NameToggle = Instance.new("TextButton")
+    NameToggle.Size = UDim2.new(0, 150, 0, 35)
+    NameToggle.Position = UDim2.new(0, 10, 0, 80)
+    NameToggle.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+    NameToggle.Text = "🏷️ أسماء اللاعبين: مفعل"
+    NameToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    NameToggle.Font = Enum.Font.GothamBold
+    NameToggle.TextSize = 14
+    NameToggle.Parent = ESPConfigCard
+    toggleCorner:Clone().Parent = NameToggle
+
+    local DistanceToggle = Instance.new("TextButton")
+    DistanceToggle.Size = UDim2.new(0, 150, 0, 35)
+    DistanceToggle.Position = UDim2.new(0, 170, 0, 80)
+    DistanceToggle.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+    DistanceToggle.Text = "📏 المسافات: مفعل"
+    DistanceToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    DistanceToggle.Font = Enum.Font.GothamBold
+    DistanceToggle.TextSize = 14
+    DistanceToggle.Parent = ESPConfigCard
+    toggleCorner:Clone().Parent = DistanceToggle
+
+    local SkeletonToggle = Instance.new("TextButton")
+    SkeletonToggle.Size = UDim2.new(0, 150, 0, 35)
+    SkeletonToggle.Position = UDim2.new(0, 10, 0, 125)
+    SkeletonToggle.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+    SkeletonToggle.Text = "💀 هيكل عظمي: معطل"
+    SkeletonToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SkeletonToggle.Font = Enum.Font.GothamBold
+    SkeletonToggle.TextSize = 14
+    SkeletonToggle.Parent = ESPConfigCard
+    toggleCorner:Clone().Parent = SkeletonToggle
 
     local ESPColorButton = Instance.new("TextButton")
-    ESPColorButton.Size = UDim2.new(0, 120, 0, 35)
-    ESPColorButton.Position = UDim2.new(0, 140, 0, 35)
+    ESPColorButton.Size = UDim2.new(0, 150, 0, 35)
+    ESPColorButton.Position = UDim2.new(0, 170, 0, 125)
     ESPColorButton.BackgroundColor3 = ESPColor
-    ESPColorButton.Text = "🎨 تغيير اللون"
+    ESPColorButton.Text = "🎨 تغيير لون ESP"
     ESPColorButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     ESPColorButton.Font = Enum.Font.GothamBold
     ESPColorButton.TextSize = 14
-    ESPColorButton.Parent = ESPCard
+    ESPColorButton.Parent = ESPConfigCard
     toggleCorner:Clone().Parent = ESPColorButton
 
-    -- بطاقة توسيع الهيت بوكس
+    -- محتوى تبويب Combat
+    -- بطاقة الأيم بوت
+    local AimbotCard = Instance.new("Frame")
+    AimbotCard.Size = UDim2.new(1, 0, 0, 150)
+    AimbotCard.Position = UDim2.new(0, 0, 0, 0)
+    AimbotCard.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    AimbotCard.BackgroundTransparency = 0.1
+    AimbotCard.BorderSizePixel = 0
+    AimbotCard.Parent = CombatContent
+    cardCorner:Clone().Parent = AimbotCard
+    cardShadow:Clone().Parent = AimbotCard
+
+    local AimbotTitle = Instance.new("TextLabel")
+    AimbotTitle.Size = UDim2.new(1, -20, 0, 25)
+    AimbotTitle.Position = UDim2.new(0, 10, 0, 5)
+    AimbotTitle.BackgroundTransparency = 1
+    AimbotTitle.Text = "🎯 الأيم بوت الفوري"
+    AimbotTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    AimbotTitle.Font = Enum.Font.GothamBold
+    AimbotTitle.TextSize = 16
+    AimbotTitle.TextXAlignment = Enum.TextXAlignment.Left
+    AimbotTitle.Parent = AimbotCard
+
+    local AimbotToggle = Instance.new("TextButton")
+    AimbotToggle.Size = UDim2.new(0, 150, 0, 35)
+    AimbotToggle.Position = UDim2.new(0, 10, 0, 35)
+    AimbotToggle.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+    AimbotToggle.Text = "🎯 الأيم بوت: معطل"
+    AimbotToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    AimbotToggle.Font = Enum.Font.GothamBold
+    AimbotToggle.TextSize = 14
+    AimbotToggle.Parent = AimbotCard
+    toggleCorner:Clone().Parent = AimbotToggle
+
+    local FOVToggle = Instance.new("TextButton")
+    FOVToggle.Size = UDim2.new(0, 150, 0, 35)
+    FOVToggle.Position = UDim2.new(0, 170, 0, 35)
+    FOVToggle.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+    FOVToggle.Text = "🔴 دائرة FOV: مفعل"
+    FOVToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    FOVToggle.Font = Enum.Font.GothamBold
+    FOVToggle.TextSize = 14
+    FOVToggle.Parent = AimbotCard
+    toggleCorner:Clone().Parent = FOVToggle
+
+    local FOVColorButton = Instance.new("TextButton")
+    FOVColorButton.Size = UDim2.new(0, 150, 0, 35)
+    FOVColorButton.Position = UDim2.new(0, 10, 0, 80)
+    FOVColorButton.BackgroundColor3 = FOVColor
+    FOVColorButton.Text = "🎨 لون دائرة FOV"
+    FOVColorButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    FOVColorButton.Font = Enum.Font.GothamBold
+    FOVColorButton.TextSize = 14
+    FOVColorButton.Parent = AimbotCard
+    toggleCorner:Clone().Parent = FOVColorButton
+
+    -- بطاقة توسيع الهيت بوكس (انتقلت إلى Combat)
     local HitboxCard = Instance.new("Frame")
-    HitboxCard.Size = UDim2.new(1, 0, 0, 150)
-    HitboxCard.Position = UDim2.new(0, 0, 0, 110)
+    HitboxCard.Size = UDim2.new(1, 0, 0, 200)
+    HitboxCard.Position = UDim2.new(0, 0, 0, 160)
     HitboxCard.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
     HitboxCard.BackgroundTransparency = 0.1
     HitboxCard.BorderSizePixel = 0
-    HitboxCard.Parent = VisualContent
+    HitboxCard.Parent = CombatContent
     cardCorner:Clone().Parent = HitboxCard
     cardShadow:Clone().Parent = HitboxCard
 
@@ -1033,10 +1211,10 @@ local function createModernUI()
     HitboxTitle.Parent = HitboxCard
 
     local HitboxToggle = Instance.new("TextButton")
-    HitboxToggle.Size = UDim2.new(0, 120, 0, 35)
+    HitboxToggle.Size = UDim2.new(0, 150, 0, 35)
     HitboxToggle.Position = UDim2.new(0, 10, 0, 35)
     HitboxToggle.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-    HitboxToggle.Text = "معطل"
+    HitboxToggle.Text = "🎯 توسيع الهيت بوكس: معطل"
     HitboxToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
     HitboxToggle.Font = Enum.Font.GothamBold
     HitboxToggle.TextSize = 14
@@ -1044,20 +1222,82 @@ local function createModernUI()
     toggleCorner:Clone().Parent = HitboxToggle
 
     local HitboxColorButton = Instance.new("TextButton")
-    HitboxColorButton.Size = UDim2.new(0, 120, 0, 35)
-    HitboxColorButton.Position = UDim2.new(0, 140, 0, 35)
+    HitboxColorButton.Size = UDim2.new(0, 150, 0, 35)
+    HitboxColorButton.Position = UDim2.new(0, 170, 0, 35)
     HitboxColorButton.BackgroundColor3 = HitboxColor
-    HitboxColorButton.Text = "🎨 تغيير اللون"
+    HitboxColorButton.Text = "🎨 لون الهيت بوكس"
     HitboxColorButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     HitboxColorButton.Font = Enum.Font.GothamBold
     HitboxColorButton.TextSize = 14
     HitboxColorButton.Parent = HitboxCard
     toggleCorner:Clone().Parent = HitboxColorButton
 
+    -- Dropdown لاختيار الهيت بوكس
+    local DropdownContainer = Instance.new("Frame")
+    DropdownContainer.Size = UDim2.new(0, 150, 0, 40)
+    DropdownContainer.Position = UDim2.new(0, 10, 0, 80)
+    DropdownContainer.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    DropdownContainer.BackgroundTransparency = 0.1
+    DropdownContainer.Parent = HitboxCard
+    toggleCorner:Clone().Parent = DropdownContainer
+
+    local DropdownLabel = Instance.new("TextLabel")
+    DropdownLabel.Size = UDim2.new(1, -10, 0.5, 0)
+    DropdownLabel.Position = UDim2.new(0, 5, 0, 0)
+    DropdownLabel.BackgroundTransparency = 1
+    DropdownLabel.Text = "الهدف: الرأس"
+    DropdownLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    DropdownLabel.Font = Enum.Font.GothamBold
+    DropdownLabel.TextSize = 12
+    DropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
+    DropdownLabel.Parent = DropdownContainer
+
+    local DropdownButton = Instance.new("TextButton")
+    DropdownButton.Size = UDim2.new(0, 30, 0, 30)
+    DropdownButton.Position = UDim2.new(1, -35, 0.5, -15)
+    DropdownButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    DropdownButton.Text = "▼"
+    DropdownButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    DropdownButton.Font = Enum.Font.GothamBold
+    DropdownButton.TextSize = 14
+    DropdownButton.Parent = DropdownContainer
+    toggleCorner:Clone().Parent = DropdownButton
+
+    local DropdownMenu = Instance.new("Frame")
+    DropdownMenu.Size = UDim2.new(1, 0, 0, 80)
+    DropdownMenu.Position = UDim2.new(0, 0, 1, 5)
+    DropdownMenu.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    DropdownMenu.BackgroundTransparency = 0.1
+    DropdownMenu.Visible = false
+    DropdownMenu.Parent = DropdownContainer
+    toggleCorner:Clone().Parent = DropdownMenu
+
+    local HeadOption = Instance.new("TextButton")
+    HeadOption.Size = UDim2.new(1, -10, 0, 35)
+    HeadOption.Position = UDim2.new(0, 5, 0, 5)
+    HeadOption.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    HeadOption.Text = "الرأس"
+    HeadOption.TextColor3 = Color3.fromRGB(255, 255, 255)
+    HeadOption.Font = Enum.Font.GothamBold
+    HeadOption.TextSize = 12
+    HeadOption.Parent = DropdownMenu
+    toggleCorner:Clone().Parent = HeadOption
+
+    local TorsoOption = Instance.new("TextButton")
+    TorsoOption.Size = UDim2.new(1, -10, 0, 35)
+    TorsoOption.Position = UDim2.new(0, 5, 0, 45)
+    TorsoOption.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    TorsoOption.Text = "الجذع"
+    TorsoOption.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TorsoOption.Font = Enum.Font.GothamBold
+    TorsoOption.TextSize = 12
+    TorsoOption.Parent = DropdownMenu
+    toggleCorner:Clone().Parent = TorsoOption
+
     -- شريط تحكم حجم الهيت بوكس
     local SizeSliderContainer = Instance.new("Frame")
     SizeSliderContainer.Size = UDim2.new(1, -20, 0, 50)
-    SizeSliderContainer.Position = UDim2.new(0, 10, 0, 80)
+    SizeSliderContainer.Position = UDim2.new(0, 10, 0, 130)
     SizeSliderContainer.BackgroundTransparency = 1
     SizeSliderContainer.Parent = HitboxCard
 
@@ -1111,62 +1351,6 @@ local function createModernUI()
     thumbShadow.Transparency = 0.5
     thumbShadow.Parent = SliderThumb
 
-    -- محتوى تبويب Combat
-    -- بطاقة الأيم بوت
-    local AimbotCard = Instance.new("Frame")
-    AimbotCard.Size = UDim2.new(1, 0, 0, 150)
-    AimbotCard.Position = UDim2.new(0, 0, 0, 0)
-    AimbotCard.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-    AimbotCard.BackgroundTransparency = 0.1
-    AimbotCard.BorderSizePixel = 0
-    AimbotCard.Parent = CombatContent
-    cardCorner:Clone().Parent = AimbotCard
-    cardShadow:Clone().Parent = AimbotCard
-
-    local AimbotTitle = Instance.new("TextLabel")
-    AimbotTitle.Size = UDim2.new(1, -20, 0, 25)
-    AimbotTitle.Position = UDim2.new(0, 10, 0, 5)
-    AimbotTitle.BackgroundTransparency = 1
-    AimbotTitle.Text = "🎯 الأيم بوت الفوري"
-    AimbotTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    AimbotTitle.Font = Enum.Font.GothamBold
-    AimbotTitle.TextSize = 16
-    AimbotTitle.TextXAlignment = Enum.TextXAlignment.Left
-    AimbotTitle.Parent = AimbotCard
-
-    local AimbotToggle = Instance.new("TextButton")
-    AimbotToggle.Size = UDim2.new(0, 120, 0, 35)
-    AimbotToggle.Position = UDim2.new(0, 10, 0, 35)
-    AimbotToggle.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-    AimbotToggle.Text = "معطل"
-    AimbotToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    AimbotToggle.Font = Enum.Font.GothamBold
-    AimbotToggle.TextSize = 14
-    AimbotToggle.Parent = AimbotCard
-    toggleCorner:Clone().Parent = AimbotToggle
-
-    local FOVToggle = Instance.new("TextButton")
-    FOVToggle.Size = UDim2.new(0, 120, 0, 35)
-    FOVToggle.Position = UDim2.new(0, 140, 0, 35)
-    FOVToggle.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-    FOVToggle.Text = "🔴 دائرة FOV"
-    FOVToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    FOVToggle.Font = Enum.Font.GothamBold
-    FOVToggle.TextSize = 14
-    FOVToggle.Parent = AimbotCard
-    toggleCorner:Clone().Parent = FOVToggle
-
-    local FOVColorButton = Instance.new("TextButton")
-    FOVColorButton.Size = UDim2.new(0, 120, 0, 35)
-    FOVColorButton.Position = UDim2.new(0, 10, 0, 80)
-    FOVColorButton.BackgroundColor3 = FOVColor
-    FOVColorButton.Text = "🎨 لون FOV"
-    FOVColorButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    FOVColorButton.Font = Enum.Font.GothamBold
-    FOVColorButton.TextSize = 14
-    FOVColorButton.Parent = AimbotCard
-    toggleCorner:Clone().Parent = FOVColorButton
-
     -- محتوى تبويب Movement
     -- بطاقة السرعة
     local SpeedCard = Instance.new("Frame")
@@ -1210,7 +1394,7 @@ local function createModernUI()
     sliderBgCorner:Clone().Parent = SpeedSlider
 
     local SpeedFill = Instance.new("Frame")
-    SpeedFill.Size = UDim2.new((PlayerSpeed - 16) / 84, 0, 1, 0) -- من 16 إلى 100
+    SpeedFill.Size = UDim2.new((PlayerSpeed - 16) / 84, 0, 1, 0)
     SpeedFill.Position = UDim2.new(0, 0, 0, 0)
     SpeedFill.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
     SpeedFill.BorderSizePixel = 0
@@ -1268,7 +1452,7 @@ local function createModernUI()
     sliderBgCorner:Clone().Parent = JumpSlider
 
     local JumpFill = Instance.new("Frame")
-    JumpFill.Size = UDim2.new((JumpPower - 50) / 150, 0, 1, 0) -- من 50 إلى 200
+    JumpFill.Size = UDim2.new((JumpPower - 50) / 150, 0, 1, 0)
     JumpFill.Position = UDim2.new(0, 0, 0, 0)
     JumpFill.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
     JumpFill.BorderSizePixel = 0
@@ -1285,7 +1469,7 @@ local function createModernUI()
     thumbShadow:Clone().Parent = JumpThumb
 
     local InfiniteJumpToggle = Instance.new("TextButton")
-    InfiniteJumpToggle.Size = UDim2.new(0, 140, 0, 35)
+    InfiniteJumpToggle.Size = UDim2.new(0, 170, 0, 35)
     InfiniteJumpToggle.Position = UDim2.new(0, 10, 0, 80)
     InfiniteJumpToggle.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
     InfiniteJumpToggle.Text = "🔄 قفز لا نهائي: معطل"
@@ -1296,8 +1480,8 @@ local function createModernUI()
     toggleCorner:Clone().Parent = InfiniteJumpToggle
 
     local FlyToggle = Instance.new("TextButton")
-    FlyToggle.Size = UDim2.new(0, 140, 0, 35)
-    FlyToggle.Position = UDim2.new(0, 160, 0, 80)
+    FlyToggle.Size = UDim2.new(0, 170, 0, 35)
+    FlyToggle.Position = UDim2.new(0, 190, 0, 80)
     FlyToggle.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
     FlyToggle.Text = "✈️ الطيران: معطل"
     FlyToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1306,25 +1490,37 @@ local function createModernUI()
     FlyToggle.Parent = JumpCard
     toggleCorner:Clone().Parent = FlyToggle
 
+    -- محتوى تبويب Visual
     -- بطاقة المعلومات
     local InfoCard = Instance.new("Frame")
-    InfoCard.Size = UDim2.new(1, 0, 0, 80)
-    InfoCard.Position = UDim2.new(0, 0, 0, 430)
-    InfoCard.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+    InfoCard.Size = UDim2.new(1, 0, 0, 150)
+    InfoCard.Position = UDim2.new(0, 0, 0, 0)
+    InfoCard.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
     InfoCard.BackgroundTransparency = 0.1
     InfoCard.BorderSizePixel = 0
     InfoCard.Parent = VisualContent
     cardCorner:Clone().Parent = InfoCard
     cardShadow:Clone().Parent = InfoCard
 
+    local InfoTitle = Instance.new("TextLabel")
+    InfoTitle.Size = UDim2.new(1, -20, 0, 25)
+    InfoTitle.Position = UDim2.new(0, 10, 0, 5)
+    InfoTitle.BackgroundTransparency = 1
+    InfoTitle.Text = "ℹ️ معلومات النظام"
+    InfoTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    InfoTitle.Font = Enum.Font.GothamBold
+    InfoTitle.TextSize = 16
+    InfoTitle.TextXAlignment = Enum.TextXAlignment.Left
+    InfoTitle.Parent = InfoCard
+
     local ColorInfo = Instance.new("TextLabel")
-    ColorInfo.Size = UDim2.new(1, -20, 1, -10)
-    ColorInfo.Position = UDim2.new(0, 10, 0, 5)
+    ColorInfo.Size = UDim2.new(1, -20, 1, -40)
+    ColorInfo.Position = UDim2.new(0, 10, 0, 35)
     ColorInfo.BackgroundTransparency = 1
     ColorInfo.Text = "🎨 الألوان الحالية:\nالرؤية: أزرق ساطع\nالهيت بوكس: أحمر نيون\nFOV: أحمر نيون"
     ColorInfo.TextColor3 = Color3.fromRGB(200, 200, 255)
     ColorInfo.Font = Enum.Font.Gotham
-    ColorInfo.TextSize = 12
+    ColorInfo.TextSize = 14
     ColorInfo.TextXAlignment = Enum.TextXAlignment.Left
     ColorInfo.TextYAlignment = Enum.TextYAlignment.Top
     ColorInfo.Parent = InfoCard
@@ -1370,18 +1566,20 @@ local function createModernUI()
 
     -- وظائف التبويبات
     local function ShowTab(tabName)
-        VisualContent.Visible = (tabName == "Visual")
+        ESPContent.Visible = (tabName == "ESP")
         CombatContent.Visible = (tabName == "Combat")
         MovementContent.Visible = (tabName == "Movement")
+        VisualContent.Visible = (tabName == "Visual")
         
-        VisualTab.BackgroundColor3 = (tabName == "Visual") and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(40, 40, 60)
+        ESPTab.BackgroundColor3 = (tabName == "ESP") and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(40, 40, 60)
         CombatTab.BackgroundColor3 = (tabName == "Combat") and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(40, 40, 60)
         MovementTab.BackgroundColor3 = (tabName == "Movement") and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(40, 40, 60)
+        VisualTab.BackgroundColor3 = (tabName == "Visual") and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(40, 40, 60)
     end
 
-    VisualTab.MouseButton1Click:Connect(function()
-        ShowTab("Visual")
-        createRippleEffect(VisualTab)
+    ESPTab.MouseButton1Click:Connect(function()
+        ShowTab("ESP")
+        createRippleEffect(ESPTab)
     end)
 
     CombatTab.MouseButton1Click:Connect(function()
@@ -1392,6 +1590,11 @@ local function createModernUI()
     MovementTab.MouseButton1Click:Connect(function()
         ShowTab("Movement")
         createRippleEffect(MovementTab)
+    end)
+
+    VisualTab.MouseButton1Click:Connect(function()
+        ShowTab("Visual")
+        createRippleEffect(VisualTab)
     end)
 
     -- وظيفة تحديث شريط الهيت بوكس
@@ -1474,6 +1677,58 @@ local function createModernUI()
     setupSlider(SpeedSlider, SpeedThumb, updateSpeedSlider, 16, 100)
     setupSlider(JumpSlider, JumpThumb, updateJumpSlider, 50, 200)
 
+    -- Dropdown وظائف
+    local dropdownOpen = false
+    
+    DropdownButton.MouseButton1Click:Connect(function()
+        dropdownOpen = not dropdownOpen
+        DropdownMenu.Visible = dropdownOpen
+        DropdownButton.Text = dropdownOpen and "▲" or "▼"
+        createRippleEffect(DropdownButton)
+    end)
+    
+    HeadOption.MouseButton1Click:Connect(function()
+        HitboxTarget = "Head"
+        DropdownLabel.Text = "الهدف: الرأس"
+        DropdownMenu.Visible = false
+        dropdownOpen = false
+        DropdownButton.Text = "▼"
+        createRippleEffect(HeadOption)
+        
+        if HitboxEnabled then
+            InitializeHitboxes()
+        end
+    end)
+    
+    TorsoOption.MouseButton1Click:Connect(function()
+        HitboxTarget = "Torso"
+        DropdownLabel.Text = "الهدف: الجذع"
+        DropdownMenu.Visible = false
+        dropdownOpen = false
+        DropdownButton.Text = "▼"
+        createRippleEffect(TorsoOption)
+        
+        if HitboxEnabled then
+            InitializeHitboxes()
+        end
+    end)
+
+    -- إغلاق Dropdown عند النقر خارجها
+    UserInputService.InputBegan:Connect(function(input)
+        if dropdownOpen and input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mousePos = input.Position
+            local absolutePos = DropdownMenu.AbsolutePosition
+            local absoluteSize = DropdownMenu.AbsoluteSize
+            
+            if not (mousePos.X >= absolutePos.X and mousePos.X <= absolutePos.X + absoluteSize.X and
+                   mousePos.Y >= absolutePos.Y and mousePos.Y <= absolutePos.Y + absoluteSize.Y) then
+                DropdownMenu.Visible = false
+                dropdownOpen = false
+                DropdownButton.Text = "▼"
+            end
+        end
+    end)
+
     -- وظيفة زر الفتح/الإغلاق
     OpenCloseButton.MouseButton1Click:Connect(function()
         UIVisible = not UIVisible
@@ -1508,11 +1763,43 @@ local function createModernUI()
     end)
 
     -- أحداث الأزرار
-    ESPToggle.MouseButton1Click:Connect(function()
+    ESPMainToggle.MouseButton1Click:Connect(function()
         ESPEnabled = not ESPEnabled
-        ESPToggle.Text = ESPEnabled and "مفعل" or "معطل"
-        ESPToggle.BackgroundColor3 = ESPEnabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(255, 60, 60)
-        createRippleEffect(ESPToggle)
+        ESPMainToggle.Text = ESPEnabled and "🔘 ESP الرئيسي: مفعل" or "🔘 ESP الرئيسي: معطل"
+        ESPMainToggle.BackgroundColor3 = ESPEnabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(255, 60, 60)
+        createRippleEffect(ESPMainToggle)
+        UpdateESP()
+    end)
+
+    BoxToggle.MouseButton1Click:Connect(function()
+        Config.BoxESP = not Config.BoxESP
+        BoxToggle.Text = Config.BoxESP and "📦 مربع ESP: مفعل" or "📦 مربع ESP: معطل"
+        BoxToggle.BackgroundColor3 = Config.BoxESP and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(255, 60, 60)
+        createRippleEffect(BoxToggle)
+        UpdateESP()
+    end)
+
+    NameToggle.MouseButton1Click:Connect(function()
+        Config.NameESP = not Config.NameESP
+        NameToggle.Text = Config.NameESP and "🏷️ أسماء اللاعبين: مفعل" or "🏷️ أسماء اللاعبين: معطل"
+        NameToggle.BackgroundColor3 = Config.NameESP and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(255, 60, 60)
+        createRippleEffect(NameToggle)
+        UpdateESP()
+    end)
+
+    DistanceToggle.MouseButton1Click:Connect(function()
+        Config.DistanceESP = not Config.DistanceESP
+        DistanceToggle.Text = Config.DistanceESP and "📏 المسافات: مفعل" or "📏 المسافات: معطل"
+        DistanceToggle.BackgroundColor3 = Config.DistanceESP and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(255, 60, 60)
+        createRippleEffect(DistanceToggle)
+        UpdateESP()
+    end)
+
+    SkeletonToggle.MouseButton1Click:Connect(function()
+        Config.SkeletonESP = not Config.SkeletonESP
+        SkeletonToggle.Text = Config.SkeletonESP and "💀 هيكل عظمي: مفعل" or "💀 هيكل عظمي: معطل"
+        SkeletonToggle.BackgroundColor3 = Config.SkeletonESP and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(255, 60, 60)
+        createRippleEffect(SkeletonToggle)
         UpdateESP()
     end)
 
@@ -1523,24 +1810,9 @@ local function createModernUI()
         createRippleEffect(ESPColorButton)
     end)
 
-    HitboxToggle.MouseButton1Click:Connect(function()
-        HitboxEnabled = not HitboxEnabled
-        HitboxToggle.Text = HitboxEnabled and "مفعل" or "معطل"
-        HitboxToggle.BackgroundColor3 = HitboxEnabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(255, 60, 60)
-        createRippleEffect(HitboxToggle)
-        InitializeHitboxes()
-    end)
-
-    HitboxColorButton.MouseButton1Click:Connect(function()
-        local newColorName = ChangeHitboxColor()
-        HitboxColorButton.BackgroundColor3 = HitboxColor
-        ColorInfo.Text = "🎨 الألوان الحالية:\nالرؤية: " .. ColorInfo.Text:match("الرؤية: (%w+ %w+)") .. "\nالهيت بوكس: " .. newColorName .. "\nFOV: " .. ColorInfo.Text:match("FOV: (%w+ %w+)")
-        createRippleEffect(HitboxColorButton)
-    end)
-
     AimbotToggle.MouseButton1Click:Connect(function()
         AimbotEnabled = not AimbotEnabled
-        AimbotToggle.Text = AimbotEnabled and "مفعل" or "معطل"
+        AimbotToggle.Text = AimbotEnabled and "🎯 الأيم بوت: مفعل" or "🎯 الأيم بوت: معطل"
         AimbotToggle.BackgroundColor3 = AimbotEnabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(255, 60, 60)
         createRippleEffect(AimbotToggle)
         UpdateFOVCircle()
@@ -1548,7 +1820,7 @@ local function createModernUI()
 
     FOVToggle.MouseButton1Click:Connect(function()
         FOVCircleVisible = not FOVCircleVisible
-        FOVToggle.Text = FOVCircleVisible and "🔴 دائرة FOV" or "⚫ دائرة FOV"
+        FOVToggle.Text = FOVCircleVisible and "🔴 دائرة FOV: مفعل" or "🔴 دائرة FOV: معطل"
         FOVToggle.BackgroundColor3 = FOVCircleVisible and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(255, 60, 60)
         createRippleEffect(FOVToggle)
         UpdateFOVCircle()
@@ -1559,6 +1831,21 @@ local function createModernUI()
         FOVColorButton.BackgroundColor3 = FOVColor
         ColorInfo.Text = "🎨 الألوان الحالية:\nالرؤية: " .. ColorInfo.Text:match("الرؤية: (%w+ %w+)") .. "\nالهيت بوكس: " .. ColorInfo.Text:match("الهيت بوكس: (%w+ %w+)") .. "\nFOV: " .. newColorName
         createRippleEffect(FOVColorButton)
+    end)
+
+    HitboxToggle.MouseButton1Click:Connect(function()
+        HitboxEnabled = not HitboxEnabled
+        HitboxToggle.Text = HitboxEnabled and "🎯 توسيع الهيت بوكس: مفعل" or "🎯 توسيع الهيت بوكس: معطل"
+        HitboxToggle.BackgroundColor3 = HitboxEnabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(255, 60, 60)
+        createRippleEffect(HitboxToggle)
+        InitializeHitboxes()
+    end)
+
+    HitboxColorButton.MouseButton1Click:Connect(function()
+        local newColorName = ChangeHitboxColor()
+        HitboxColorButton.BackgroundColor3 = HitboxColor
+        ColorInfo.Text = "🎨 الألوان الحالية:\nالرؤية: " .. ColorInfo.Text:match("الرؤية: (%w+ %w+)") .. "\nالهيت بوكس: " .. newColorName .. "\nFOV: " .. ColorInfo.Text:match("FOV: (%w+ %w+)")
+        createRippleEffect(HitboxColorButton)
     end)
 
     InfiniteJumpToggle.MouseButton1Click:Connect(function()
@@ -1645,13 +1932,7 @@ local function createModernUI()
 
     return {
         MainFrame = MainFrame,
-        OpenCloseButton = OpenCloseButton,
-        ESPToggle = ESPToggle,
-        HitboxToggle = HitboxToggle,
-        AimbotToggle = AimbotToggle,
-        InfiniteJumpToggle = InfiniteJumpToggle,
-        FlyToggle = FlyToggle,
-        ColorInfo = ColorInfo
+        OpenCloseButton = OpenCloseButton
     }
 end
 
@@ -1659,7 +1940,7 @@ end
 -- تهيئة النظام الرئيسي
 -- =============================================
 local function initializeSystem()
-    print("🎮 جاري تحميل MZ Hub v3.0...")
+    print("🎮 جاري تحميل MZ Hub v4.0...")
     
     -- عرض الإشعار الترحيبي
     ShowWelcomeNotification()
@@ -1667,7 +1948,7 @@ local function initializeSystem()
     -- إنشاء الواجهة
     local UI = createModernUI()
     
-    -- إنشاء دائرة FOV
+    -- إنشاء دائرة FOV في المنتصف
     CreateFOVCircle()
     
     -- الحلقة الرئيسية للتحديث
@@ -1724,13 +2005,15 @@ local function initializeSystem()
         end
     end)
 
-    print("🎉 MZ Hub v3.0 - تم التحميل بنجاح!")
-    print("✨ واجهة حديثة - 3 تبويبات جديدة")
-    print("🎯 نظام أيم بوت فوري - يتبع الرأس مباشرة")
-    print("👁️ نظام ESP قوي - Boxes, Names, Distance, Health")
-    print("🏃 نظام حركة متقدم - سرعة، قفز، طيران")
-    print("🖼️ إشعار ترحيبي جميل - بصورة المستخدم")
-    print("🎨 ألوان متعددة - تخصيص كامل")
+    print("🎉 MZ Hub v4.0 - تم التحميل بنجاح!")
+    print("✨ 4 تبويبات جديدة - ESP, قتال, حركة, مرئيات")
+    print("🎯 دائرة FOV في المنتصف مع تغيير اللون")
+    print("🎯 نظام أيم بوت فوري - يتبع الرأس أو الجذع")
+    print("👁️ تبويب ESP كامل - Box, Names, Distance, Skeleton")
+    print("🎯 تبويب قتال - هيت بوكس مع Dropdown للهدف")
+    print("🏃 تبويب حركة - سرعة، قفز، طيران، قفز لا نهائي")
+    print("🎨 تبويب مرئيات - معلومات النظام والألوان")
+    print("💎 جميع النصوص باللغة العربية")
     print("💎 MZ Hub ©️ | By Unknow Boi")
 end
 
